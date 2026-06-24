@@ -119,6 +119,83 @@
       </div>
     </section>
 
+    <!-- Contract view -->
+    <section id="view-contract" class="view hidden">
+      <button id="contract-back" class="btn ghost small">← Back to catalog</button>
+      <div class="grid">
+        <!-- AI assistant for contracts -->
+        <aside class="card assistant">
+          <div class="card-head">
+            <h2>✨ Contract Assistant</h2>
+            <span id="ai-status-c" class="pill">checking…</span>
+          </div>
+          <p class="muted">Paste a <b>CSV header row</b>, a <b>JSON sample</b>, or
+            describe the data. The assistant infers the schema, quality rules
+            and SLOs. Edit anything afterwards.</p>
+          <textarea id="ai-prompt-c" rows="7"
+            placeholder="e.g.&#10;order_id,dealer_id,order_date,amount,customer_email&#10;1001,D-22,2026-06-01,4200.50,jane@example.com&#10;&#10;Refreshed by 6am daily, 99.9% availability."></textarea>
+          <button id="ai-fill-c" class="btn primary full">Draft the contract</button>
+          <p id="ai-note-c" class="ai-note"></p>
+        </aside>
+
+        <!-- Contract editor -->
+        <form id="contract-form" class="card form">
+          <div class="card-head">
+            <h2 id="contract-title">Data Contract</h2>
+            <button type="button" id="contract-delete" class="btn danger small hidden">Delete</button>
+          </div>
+          <p id="contract-product" class="muted"></p>
+
+          <div class="row">
+            <div class="field">
+              <label for="c-version">Version</label>
+              <input id="c-version" value="1.0.0" />
+            </div>
+            <div class="field">
+              <label for="c-status">Status</label>
+              <select id="c-status"></select>
+            </div>
+          </div>
+
+          <h3 class="section-h">Schema</h3>
+          <div class="schema-head">
+            <span>Field</span><span>Type</span><span>Req</span><span>PII</span><span>Description</span><span></span>
+          </div>
+          <div id="schema-rows"></div>
+          <button type="button" id="add-field" class="btn ghost small">+ Add field</button>
+
+          <h3 class="section-h">Quality rules</h3>
+          <div class="rule-head">
+            <span>Field</span><span>Rule</span><span>Description</span><span></span>
+          </div>
+          <div id="rule-rows"></div>
+          <button type="button" id="add-rule" class="btn ghost small">+ Add rule</button>
+
+          <h3 class="section-h">Service-level objectives</h3>
+          <div class="row3">
+            <div class="field">
+              <label for="c-availability">Availability</label>
+              <input id="c-availability" placeholder="99.9%" />
+            </div>
+            <div class="field">
+              <label for="c-freshness">Freshness</label>
+              <input id="c-freshness" placeholder="Refreshed by 6am daily" />
+            </div>
+            <div class="field">
+              <label for="c-latency">Max latency</label>
+              <input id="c-latency" placeholder="< 200ms p95" />
+            </div>
+          </div>
+
+          <input type="hidden" id="contract-product-id" />
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Save contract</button>
+          </div>
+          <p id="contract-msg" class="form-msg"></p>
+        </form>
+      </div>
+    </section>
+
     <!-- Catalog view -->
     <section id="view-catalog" class="view hidden">
       <div class="card">

@@ -6,15 +6,21 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 import models
-from ai_assist import generate_fields
+from ai_assist import generate_contract, generate_fields
 from config import settings
 from database import get_db, init_db
 from schemas import (
     CLASSIFICATIONS,
+    CONTRACT_STATUSES,
+    FIELD_TYPES,
     FORMATS,
     FREQUENCIES,
+    RULE_TYPES,
+    AssistContractResponse,
     AssistRequest,
     AssistResponse,
+    DataContractOut,
+    DataContractUpsert,
     DataProductCreate,
     DataProductOut,
     DataProductUpdate,
@@ -41,6 +47,9 @@ def options():
         "classifications": CLASSIFICATIONS,
         "frequencies": FREQUENCIES,
         "formats": FORMATS,
+        "field_types": FIELD_TYPES,
+        "rule_types": RULE_TYPES,
+        "contract_statuses": CONTRACT_STATUSES,
     }
 
 
@@ -94,6 +103,55 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
 def assist(req: AssistRequest):
     fields, source, note = generate_fields(req.prompt)
     return AssistResponse(fields=fields, source=source, note=note)
+
+
+# --- Data contracts ----------------------------------------------------------
+def _require_product(product_id: int, db: Session) -> models.DataProduct:
+    product = db.get(models.DataProduct, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Data product not found")
+    return product
+
+
+@app.get("/api/data-products/{product_id}/contract", response_model=DataContractOut)
+def get_contract(product_id: int, db: Session = Depends(get_db)):
+    product = _require_product(product_id, db)
+    if not product.contract:
+        raise HTTPException(status_code=404, detail="No contract for this data product")
+    return product.contract
+
+
+@app.put("/api/data-products/{product_id}/contract", response_model=DataContractOut)
+def upsert_contract(
+    product_id: int, payload: DataContractUpsert, db: Session = Depends(get_db)
+):
+    product = _require_product(product_id, db)
+    data = payload.model_dump()
+    contract = product.contract
+    if contract is None:
+        contract = models.DataContract(product_id=product.id)
+        db.add(contract)
+    for key, value in data.items():
+        setattr(contract, key, value)
+    db.commit()
+    db.refresh(contract)
+    return contract
+
+
+@app.delete("/api/data-products/{product_id}/contract", status_code=204)
+def delete_contract(product_id: int, db: Session = Depends(get_db)):
+    product = _require_product(product_id, db)
+    if not product.contract:
+        raise HTTPException(status_code=404, detail="No contract for this data product")
+    db.delete(product.contract)
+    db.commit()
+    return None
+
+
+@app.post("/api/assist/contract", response_model=AssistContractResponse)
+def assist_contract(req: AssistRequest):
+    contract, source, note = generate_contract(req.prompt)
+    return AssistContractResponse(contract=contract, source=source, note=note)
 
 
 # --- Static frontend ---------------------------------------------------------

@@ -4,6 +4,12 @@ A portal where teams register and catalog their data products. Fill the form
 manually, or describe the data product in plain language and let the **AI
 assistant** pre-fill it for you.
 
+Each data product can also have a **data contract** — a lightweight, versioned
+interface (schema fields, quality rules, and service-level objectives) loosely
+aligned with the [Open Data Contract Standard](https://bitol.io/) concept. The
+contract assistant can infer a schema from a pasted CSV header, JSON sample, or
+plain-language description.
+
 ## Stack
 
 - **Backend** — FastAPI + SQLAlchemy, serving a REST API and the static frontend
@@ -38,6 +44,10 @@ extracts fields with keyword heuristics. With a key set, it uses Claude.
 | PUT    | `/api/data-products/{id}`    | Update                            |
 | DELETE | `/api/data-products/{id}`    | Delete                            |
 | POST   | `/api/assist`                | Turn free text into form fields   |
+| GET    | `/api/data-products/{id}/contract` | Get a product's data contract |
+| PUT    | `/api/data-products/{id}/contract` | Create or update the contract |
+| DELETE | `/api/data-products/{id}/contract` | Delete the contract           |
+| POST   | `/api/assist/contract`       | Infer schema/rules/SLOs from text |
 
 Interactive API docs: http://localhost:8000/docs
 
@@ -45,11 +55,11 @@ Interactive API docs: http://localhost:8000/docs
 
 ```
 backend/
-  main.py        FastAPI app + routes + static serving
-  models.py      SQLAlchemy model
+  main.py        FastAPI app + routes (products, contracts, assist) + static serving
+  models.py      SQLAlchemy models (DataProduct, DataContract)
   schemas.py     Pydantic schemas + allowed enum values
   database.py    Engine, session, startup table creation (with retry)
-  ai_assist.py   Claude + fallback field extraction
+  ai_assist.py   Claude + fallback extraction for forms and contracts
   config.py      Settings (env-driven)
   Dockerfile
 frontend/

@@ -50,8 +50,42 @@ with sync_playwright() as p:
     page.wait_for_timeout(300)
     print("Search results:", page.locator(".dp-title").count())
 
+    # --- Contract flow ---
+    page.fill("#search", "")
+    page.wait_for_timeout(200)
+    page.click("[data-contract]")  # open contract editor for the product
+    page.wait_for_selector("#view-contract:not(.hidden)")
+    page.fill("#ai-prompt-c",
+              "id,order_date,customer_email,amount\n"
+              "1,2026-06-01,jane@example.com,42.5\n"
+              "Refreshed by 6am, 99.9% availability.")
+    page.click("#ai-fill-c")
+    page.wait_for_selector(".schema-row", timeout=10000)
+    field_count = page.locator(".schema-row").count()
+    print("Inferred schema rows:", field_count)
+    # the email column should be flagged PII by the inference
+    pii_checks = page.locator(".schema-row .f-pii:checked").count()
+    print("PII-flagged fields:", pii_checks)
+    page.select_option("#c-status", "active")
+    page.click("#contract-form button[type=submit]")
+
+    # back on catalog, the product should now show the contract chip
+    page.wait_for_selector(".chip.contract", timeout=10000)
+    has_contract_chip = page.locator(".chip.contract").count()
+    print("Products with contract chip:", has_contract_chip)
+
+    # re-open to confirm it loads the saved contract
+    page.click("[data-contract]")
+    page.wait_for_selector("#view-contract:not(.hidden)")
+    page.wait_for_selector(".schema-row")
+    print("Reloaded contract status:", page.input_value("#c-status"))
+    print("Reloaded schema rows:", page.locator(".schema-row").count())
+
     print("Console errors:", errors)
     assert "Warranty Claims Weekly" in titles, "product not in catalog"
+    assert field_count >= 4, "schema inference produced too few fields"
+    assert pii_checks >= 1, "email field not flagged as PII"
+    assert has_contract_chip >= 1, "contract chip not shown after save"
     assert not errors, f"console errors: {errors}"
     print("\nALL UI CHECKS PASSED")
     browser.close()

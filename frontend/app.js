@@ -14,16 +14,21 @@ const FIELD_KEYS = [
 ];
 
 let allProducts = [];
+let OPTIONS = { field_types: [], rule_types: [], contract_statuses: [] };
 
-// ---- Tabs -------------------------------------------------------------------
+// ---- Tabs / views -----------------------------------------------------------
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => switchView(tab.dataset.view));
 });
 function switchView(view) {
+  // The contract view is reached from a catalog item, not a top tab; keep the
+  // active tab highlight on Catalog while it's open.
+  const activeTab = view === "contract" ? "catalog" : view;
   document.querySelectorAll(".tab").forEach((t) =>
-    t.classList.toggle("active", t.dataset.view === view));
+    t.classList.toggle("active", t.dataset.view === activeTab));
   $("#view-register").classList.toggle("hidden", view !== "register");
   $("#view-catalog").classList.toggle("hidden", view !== "catalog");
+  $("#view-contract").classList.toggle("hidden", view !== "contract");
   if (view === "catalog") loadCatalog();
 }
 
@@ -41,23 +46,25 @@ function toast(msg) {
 async function bootstrap() {
   try {
     const opts = await api("/options");
+    OPTIONS = opts;
     fillSelect("#classification", opts.classifications);
     fillSelect("#update_frequency", opts.frequencies);
     fillSelect("#output_format", opts.formats);
+    fillSelect("#c-status", opts.contract_statuses);
   } catch (e) { /* selects stay empty; non-fatal */ }
 
   try {
     const health = await api("/health");
-    const pill = $("#ai-status");
-    if (health.ai_enabled) {
-      pill.textContent = "Claude connected";
-      pill.classList.add("on");
-    } else {
-      pill.textContent = "local mode";
-      pill.classList.add("off");
-    }
+    const label = health.ai_enabled ? "Claude connected" : "local mode";
+    const cls = health.ai_enabled ? "on" : "off";
+    ["#ai-status", "#ai-status-c"].forEach((sel) => {
+      const pill = $(sel);
+      if (pill) { pill.textContent = label; pill.classList.add(cls); }
+    });
   } catch (e) {
-    $("#ai-status").textContent = "offline";
+    ["#ai-status", "#ai-status-c"].forEach((sel) => {
+      if ($(sel)) $(sel).textContent = "offline";
+    });
   }
   loadCatalog();
 }
@@ -214,6 +221,7 @@ function renderCatalog(query = "") {
           <p class="dp-desc">${esc(p.description) || "<em>No description</em>"}</p>
         </div>
         <div class="dp-actions">
+          <button class="btn ghost small" data-contract="${p.id}">${p.has_contract ? "Contract" : "+ Contract"}</button>
           <button class="btn ghost small" data-edit="${p.id}">Edit</button>
           <button class="btn danger small" data-del="${p.id}">Delete</button>
         </div>
@@ -224,6 +232,7 @@ function renderCatalog(query = "") {
         <span class="chip">${esc(p.output_format)}</span>
         <span class="chip">${esc(p.update_frequency)}</span>
         ${p.contains_pii ? `<span class="chip pii">PII</span>` : ""}
+        <span class="chip ${p.has_contract ? "contract" : "nocontract"}">${p.has_contract ? "✓ Contract" : "No contract"}</span>
         ${tagChips(p.tags)}
       </div>
       <div class="dp-meta">
@@ -243,6 +252,9 @@ function renderCatalog(query = "") {
       const p = allProducts.find((x) => x.id == b.dataset.del);
       deleteProduct(p.id, p.name);
     }));
+  list.querySelectorAll("[data-contract]").forEach((b) =>
+    b.addEventListener("click", () =>
+      openContract(allProducts.find((p) => p.id == b.dataset.contract))));
 }
 
 function tagChips(tags) {
@@ -255,5 +267,191 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
+
+// ---- Data contracts ---------------------------------------------------------
+let currentProduct = null;
+
+async function openContract(product) {
+  if (!product) return;
+  currentProduct = product;
+  $("#contract-product-id").value = product.id;
+  $("#contract-product").innerHTML =
+    `Contract for <b>${esc(product.name)}</b>`;
+  $("#contract-msg").textContent = "";
+  $("#ai-note-c").textContent = "";
+  $("#ai-prompt-c").value = "";
+
+  let contract = blankContract();
+  let exists = false;
+  if (product.has_contract) {
+    try { contract = await api(`/data-products/${product.id}/contract`); exists = true; }
+    catch (e) { /* fall back to blank */ }
+  }
+  fillContract(contract);
+  $("#contract-title").textContent = exists ? "Edit Data Contract" : "New Data Contract";
+  $("#contract-delete").classList.toggle("hidden", !exists);
+  switchView("contract");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function blankContract() {
+  return {
+    version: "1.0.0", status: "draft",
+    schema_fields: [], quality_rules: [],
+    slo_availability: "", slo_freshness: "", slo_max_latency: "",
+  };
+}
+
+function fillContract(c) {
+  $("#c-version").value = c.version || "1.0.0";
+  $("#c-status").value = c.status || "draft";
+  $("#c-availability").value = c.slo_availability || "";
+  $("#c-freshness").value = c.slo_freshness || "";
+  $("#c-latency").value = c.slo_max_latency || "";
+  renderSchemaRows(c.schema_fields || []);
+  renderRuleRows(c.quality_rules || []);
+}
+
+function optionsHtml(values, selected) {
+  return values.map((v) =>
+    `<option value="${esc(v)}" ${v === selected ? "selected" : ""}>${esc(v)}</option>`).join("");
+}
+
+function renderSchemaRows(fields) {
+  const box = $("#schema-rows");
+  if (!fields.length) {
+    box.innerHTML = `<p class="empty-rows">No fields yet — add one or use the assistant.</p>`;
+    return;
+  }
+  box.innerHTML = fields.map((f) => `
+    <div class="schema-row">
+      <input class="f-name" value="${esc(f.name)}" placeholder="field_name" />
+      <select class="f-type">${optionsHtml(OPTIONS.field_types, f.type || "string")}</select>
+      <span class="cell-check"><input type="checkbox" class="f-req" ${f.required ? "checked" : ""} /></span>
+      <span class="cell-check"><input type="checkbox" class="f-pii" ${f.pii ? "checked" : ""} /></span>
+      <input class="f-desc" value="${esc(f.description)}" placeholder="description" />
+      <button type="button" class="row-del" title="Remove">×</button>
+    </div>`).join("");
+  box.querySelectorAll(".row-del").forEach((b) =>
+    b.addEventListener("click", () => { b.closest(".schema-row").remove(); ensureSchemaEmpty(); }));
+}
+
+function renderRuleRows(rules) {
+  const box = $("#rule-rows");
+  if (!rules.length) {
+    box.innerHTML = `<p class="empty-rows">No quality rules yet.</p>`;
+    return;
+  }
+  box.innerHTML = rules.map((r) => `
+    <div class="rule-row">
+      <input class="r-field" value="${esc(r.field)}" placeholder="(dataset)" />
+      <select class="r-rule">${optionsHtml(OPTIONS.rule_types, r.rule || "not_null")}</select>
+      <input class="r-desc" value="${esc(r.description)}" placeholder="description" />
+      <button type="button" class="row-del" title="Remove">×</button>
+    </div>`).join("");
+  box.querySelectorAll(".row-del").forEach((b) =>
+    b.addEventListener("click", () => { b.closest(".rule-row").remove(); ensureRuleEmpty(); }));
+}
+
+function ensureSchemaEmpty() {
+  if (!$("#schema-rows").querySelector(".schema-row")) renderSchemaRows([]);
+}
+function ensureRuleEmpty() {
+  if (!$("#rule-rows").querySelector(".rule-row")) renderRuleRows([]);
+}
+
+function appendSchemaRow(field) {
+  const current = collectSchema();
+  current.push(field || { name: "", type: "string", required: false, pii: false, description: "" });
+  renderSchemaRows(current);
+}
+function appendRuleRow(rule) {
+  const current = collectRules();
+  current.push(rule || { field: "", rule: "not_null", description: "" });
+  renderRuleRows(current);
+}
+
+function collectSchema() {
+  return [...$("#schema-rows").querySelectorAll(".schema-row")].map((row) => ({
+    name: row.querySelector(".f-name").value.trim(),
+    type: row.querySelector(".f-type").value,
+    required: row.querySelector(".f-req").checked,
+    pii: row.querySelector(".f-pii").checked,
+    description: row.querySelector(".f-desc").value.trim(),
+  })).filter((f) => f.name);
+}
+function collectRules() {
+  return [...$("#rule-rows").querySelectorAll(".rule-row")].map((row) => ({
+    field: row.querySelector(".r-field").value.trim(),
+    rule: row.querySelector(".r-rule").value,
+    description: row.querySelector(".r-desc").value.trim(),
+  }));
+}
+
+$("#add-field").addEventListener("click", () => appendSchemaRow());
+$("#add-rule").addEventListener("click", () => appendRuleRow());
+$("#contract-back").addEventListener("click", () => switchView("catalog"));
+
+$("#contract-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = $("#contract-msg");
+  msg.textContent = ""; msg.className = "form-msg";
+  const id = $("#contract-product-id").value;
+  const payload = {
+    version: $("#c-version").value.trim() || "1.0.0",
+    status: $("#c-status").value,
+    schema_fields: collectSchema(),
+    quality_rules: collectRules(),
+    slo_availability: $("#c-availability").value.trim(),
+    slo_freshness: $("#c-freshness").value.trim(),
+    slo_max_latency: $("#c-latency").value.trim(),
+  };
+  try {
+    await api(`/data-products/${id}/contract`, jsonReq("PUT", payload));
+    toast("Contract saved");
+    switchView("catalog");
+  } catch (err) {
+    msg.textContent = err.message; msg.classList.add("err");
+  }
+});
+
+$("#contract-delete").addEventListener("click", async () => {
+  const id = $("#contract-product-id").value;
+  if (!confirm("Delete this contract? This cannot be undone.")) return;
+  try {
+    await api(`/data-products/${id}/contract`, { method: "DELETE" });
+    toast("Contract deleted");
+    switchView("catalog");
+  } catch (e) { toast("Delete failed: " + e.message); }
+});
+
+// AI assist for contracts
+$("#ai-fill-c").addEventListener("click", async () => {
+  const prompt = $("#ai-prompt-c").value.trim();
+  const note = $("#ai-note-c");
+  if (!prompt) { note.textContent = "Paste a sample or description first."; return; }
+  const btn = $("#ai-fill-c");
+  btn.disabled = true; btn.textContent = "Drafting…";
+  note.textContent = "";
+  try {
+    const res = await api("/assist/contract", jsonReq("POST", { prompt }));
+    const c = res.contract;
+    renderSchemaRows(c.schema_fields || []);
+    renderRuleRows(c.quality_rules || []);
+    if (c.slo_availability) $("#c-availability").value = c.slo_availability;
+    if (c.slo_freshness) $("#c-freshness").value = c.slo_freshness;
+    if (c.slo_max_latency) $("#c-latency").value = c.slo_max_latency;
+    [...$("#schema-rows").querySelectorAll(".schema-row"),
+     ...$("#rule-rows").querySelectorAll(".rule-row")].forEach(flash);
+    const n = (c.schema_fields || []).length;
+    note.textContent = (res.source === "claude" ? "✓ Drafted by Claude. " : "✓ Drafted locally. ")
+      + `${n} field${n === 1 ? "" : "s"} inferred. ` + (res.note || "Review before saving.");
+    toast("Contract drafted — review the schema");
+  } catch (e) {
+    note.textContent = "Assistant error: " + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = "Draft the contract";
+  }
+});
 
 bootstrap();
