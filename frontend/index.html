@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Products Registration Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <div>
+        <h1>Data Products Portal</h1>
+        <p class="tagline">Register and catalog your data products</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-view="register">Register</button>
+      <button class="tab" data-view="catalog">Catalog <span id="catalog-count" class="badge">0</span></button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Register view -->
+    <section id="view-register" class="view">
+      <div class="grid">
+        <!-- AI assistant -->
+        <aside class="card assistant">
+          <div class="card-head">
+            <h2>✨ AI Assistant</h2>
+            <span id="ai-status" class="pill">checking…</span>
+          </div>
+          <p class="muted">Describe your data product in plain language and let the
+            assistant pre-fill the form. You can edit everything afterwards.</p>
+          <textarea id="ai-prompt" rows="6"
+            placeholder="e.g. A daily sales-by-dealer table sourced from SAP and Salesforce, owned by Jane Doe (jane.doe@example.com). Contains customer PII. Needs to refresh by 6am, 99.9% availability."></textarea>
+          <button id="ai-fill" class="btn primary full">Help me fill the form</button>
+          <p id="ai-note" class="ai-note"></p>
+        </aside>
+
+        <!-- Manual form -->
+        <form id="dp-form" class="card form">
+          <div class="card-head">
+            <h2 id="form-title">Register a Data Product</h2>
+            <button type="button" id="form-reset" class="btn ghost small">Clear</button>
+          </div>
+
+          <div class="field">
+            <label for="name">Name <span class="req">*</span></label>
+            <input id="name" name="name" required maxlength="200" />
+          </div>
+
+          <div class="field">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="3"></textarea>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="domain">Domain</label>
+              <input id="domain" name="domain" placeholder="Sales, Finance…" />
+            </div>
+            <div class="field">
+              <label for="classification">Classification</label>
+              <select id="classification" name="classification"></select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="owner_name">Owner</label>
+              <input id="owner_name" name="owner_name" />
+            </div>
+            <div class="field">
+              <label for="owner_email">Owner email</label>
+              <input id="owner_email" name="owner_email" type="email" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="update_frequency">Update frequency</label>
+              <select id="update_frequency" name="update_frequency"></select>
+            </div>
+            <div class="field">
+              <label for="output_format">Output format</label>
+              <select id="output_format" name="output_format"></select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="source_systems">Source systems</label>
+            <input id="source_systems" name="source_systems" placeholder="SAP, Salesforce" />
+          </div>
+
+          <div class="field">
+            <label for="sla">SLA</label>
+            <input id="sla" name="sla" placeholder="99.9% availability, refreshed by 6am" />
+          </div>
+
+          <div class="field">
+            <label for="tags">Tags</label>
+            <input id="tags" name="tags" placeholder="comma, separated, tags" />
+          </div>
+
+          <label class="checkbox">
+            <input id="contains_pii" name="contains_pii" type="checkbox" />
+            <span>Contains PII / sensitive personal data</span>
+          </label>
+
+          <input type="hidden" id="product_id" />
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Save data product</button>
+          </div>
+          <p id="form-msg" class="form-msg"></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Catalog view -->
+    <section id="view-catalog" class="view hidden">
+      <div class="card">
+        <div class="card-head">
+          <h2>Registered Data Products</h2>
+          <input id="search" class="search" placeholder="Search…" />
+        </div>
+        <div id="catalog-list" class="catalog"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
