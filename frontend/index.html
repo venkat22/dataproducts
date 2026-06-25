@@ -3,213 +3,634 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Data Products Registration Portal</title>
+  <title>Unified Data Marketplace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="logo">◆</span>
-      <div>
-        <h1>Data Products Portal</h1>
-        <p class="tagline">Register and catalog your data products</p>
+
+<!-- ── Top Nav ────────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-logo">&#9670;</div>
+    <div class="brand-divider"></div>
+    <span class="brand-name">Unified Data Marketplace</span>
+  </div>
+  <nav class="nav-links">
+    <button class="nav-link" data-view="browse">Browse Data Products</button>
+    <button class="nav-link" data-view="myproducts">My Data Products <span id="my-count" class="nav-badge hidden">0</span></button>
+    <button class="nav-link" data-view="register">Register</button>
+    <button class="nav-link" data-view="home">Learn</button>
+  </nav>
+  <button class="nav-user" title="Account">&#9679;</button>
+</header>
+
+<!-- ── Views ──────────────────────────────────────────────────────── -->
+
+<!-- HOME ─────────────────────────────────────────────────────────── -->
+<section id="view-home" class="view page">
+  <div class="hero">
+    <div class="hero-pills">
+      <span class="hero-pill">Discoverable</span>
+      <span class="hero-pill">Trusted</span>
+      <span class="hero-pill">Accessible</span>
+    </div>
+    <h1>Welcome to Vertiv's Unified Data Marketplace</h1>
+    <p>AI-Powered Unified view to your Data Landscape</p>
+    <div class="hero-actions">
+      <button class="btn outline-white" data-view="home">Learn More</button>
+      <button class="btn primary" data-view="browse">&#9776; Browse all Data Products</button>
+    </div>
+  </div>
+</section>
+
+<!-- BROWSE ───────────────────────────────────────────────────────── -->
+<section id="view-browse" class="view page hidden">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <button class="breadcrumb-link" data-view="home">Home</button>
+      <span class="breadcrumb-sep">/</span>
+      <span>Browse Data Products</span>
+    </div>
+    <h1 class="page-title">Browse Data Products</h1>
+  </div>
+  <div class="browse-layout">
+    <!-- Filters -->
+    <aside class="filter-sidebar">
+      <div class="filter-panel">
+        <div class="filter-header">
+          <span class="filter-title">Filters</span>
+          <button id="reset-filters" class="reset-link">Reset all</button>
+        </div>
+        <div class="filter-section">
+          <div class="filter-section-title">Data Product</div>
+          <label class="filter-radio">
+            <input type="radio" name="dp-scope" value="all" checked /> All Data Products
+          </label>
+          <label class="filter-radio">
+            <input type="radio" name="dp-scope" value="mine" /> My Data Products
+          </label>
+        </div>
+        <div class="filter-section">
+          <div class="filter-section-title">Domain</div>
+          <div id="domain-filters"></div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-section-title">Classification</div>
+          <div id="classification-filters"></div>
+        </div>
+      </div>
+    </aside>
+    <!-- Main -->
+    <div class="browse-main">
+      <div class="browse-toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">&#128269;</span>
+          <input id="search" type="text" class="search-input" placeholder="Search by name, description, tags..." />
+        </div>
+        <button id="ai-search-btn" class="btn ghost sm" title="Describe what you need in plain language">&#129302; AI Search</button>
+        <div class="sort-wrap" style="margin-left:auto;">
+          <span class="sort-label">Sort by:</span>
+          <select id="sort-select" class="sort-select">
+            <option value="az">A - Z</option>
+            <option value="za">Z - A</option>
+            <option value="recent">Most Recent</option>
+          </select>
+        </div>
+      </div>
+      <div id="active-filters" class="active-filters" style="margin-bottom:8px;"></div>
+      <div id="catalog-list" class="card-grid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- MY DATA PRODUCTS ─────────────────────────────────────────────── -->
+<section id="view-myproducts" class="view page hidden">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <button class="breadcrumb-link" data-view="home">Home</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <h1 class="page-title">My Data Products</h1>
+      <button class="add-btn" data-view="register">+ Register New Data Product</button>
+    </div>
+  </div>
+  <div class="myproducts-layout">
+    <div class="myproducts-toolbar">
+      <div class="search-wrap" style="max-width:360px;">
+        <span class="search-icon">&#128269;</span>
+        <input id="my-search" type="text" class="search-input" placeholder="Search by name, description, tags..." />
+      </div>
+      <div class="sort-wrap" style="margin-left:auto;">
+        <span class="sort-label">Sort by:</span>
+        <select id="my-sort-select" class="sort-select">
+          <option value="az">A - Z</option>
+          <option value="za">Z - A</option>
+        </select>
       </div>
     </div>
-    <nav class="tabs">
-      <button class="tab active" data-view="register">Register</button>
-      <button class="tab" data-view="catalog">Catalog <span id="catalog-count" class="badge">0</span></button>
-    </nav>
-  </header>
+    <div class="tabs-row">
+      <button class="tab-btn active" data-tab="published">Published <span id="published-count" class="tab-count">0</span></button>
+      <button class="tab-btn" data-tab="review">Under Review <span id="review-count" class="tab-count">0</span></button>
+      <button class="tab-btn" data-tab="subscribed">Subscribed <span id="subscribed-count" class="tab-count">0</span></button>
+    </div>
+    <div id="my-catalog-list" class="card-grid"></div>
+  </div>
+</section>
 
-  <main class="container">
-    <!-- Register view -->
-    <section id="view-register" class="view">
-      <div class="grid">
-        <!-- AI assistant -->
-        <aside class="card assistant">
-          <div class="card-head">
-            <h2>✨ AI Assistant</h2>
-            <span id="ai-status" class="pill">checking…</span>
+<!-- REGISTER ─────────────────────────────────────────────────────── -->
+<section id="view-register" class="view page hidden">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <button class="breadcrumb-link" data-view="home">Home</button>
+    </div>
+    <h1 class="page-title" id="register-page-title">Register New Data Product</h1>
+  </div>
+  <div class="register-layout">
+
+    <!-- AI Banner / Landing -->
+    <div id="register-landing" class="">
+      <!-- AI-Powered card -->
+      <div class="ai-banner" style="flex-direction:column;gap:0;">
+        <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px;">
+          <div class="ai-banner-icon">&#129302;</div>
+          <div style="flex:1;">
+            <div class="ai-banner-badge" id="ai-reg-badge">checking…</div>
+            <h3 id="ai-reg-heading">AI-Powered Registration</h3>
+            <p id="ai-reg-subtext">Describe your data product in plain language and the AI assistant will pre-fill the entire registration form for you.</p>
           </div>
-          <p class="muted">Describe your data product in plain language and let the
-            assistant pre-fill the form. You can edit everything afterwards.</p>
-          <textarea id="ai-prompt" rows="6"
-            placeholder="e.g. A daily sales-by-dealer table sourced from SAP and Salesforce, owned by Jane Doe (jane.doe@example.com). Contains customer PII. Needs to refresh by 6am, 99.9% availability."></textarea>
-          <button id="ai-fill" class="btn primary full">Help me fill the form</button>
-          <p id="ai-note" class="ai-note"></p>
-        </aside>
-
-        <!-- Manual form -->
-        <form id="dp-form" class="card form">
-          <div class="card-head">
-            <h2 id="form-title">Register a Data Product</h2>
-            <button type="button" id="form-reset" class="btn ghost small">Clear</button>
-          </div>
-
-          <div class="field">
-            <label for="name">Name <span class="req">*</span></label>
-            <input id="name" name="name" required maxlength="200" />
-          </div>
-
-          <div class="field">
-            <label for="description">Description</label>
-            <textarea id="description" name="description" rows="3"></textarea>
-          </div>
-
-          <div class="row">
-            <div class="field">
-              <label for="domain">Domain</label>
-              <input id="domain" name="domain" placeholder="Sales, Finance…" />
-            </div>
-            <div class="field">
-              <label for="classification">Classification</label>
-              <select id="classification" name="classification"></select>
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="field">
-              <label for="owner_name">Owner</label>
-              <input id="owner_name" name="owner_name" />
-            </div>
-            <div class="field">
-              <label for="owner_email">Owner email</label>
-              <input id="owner_email" name="owner_email" type="email" />
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="field">
-              <label for="update_frequency">Update frequency</label>
-              <select id="update_frequency" name="update_frequency"></select>
-            </div>
-            <div class="field">
-              <label for="output_format">Output format</label>
-              <select id="output_format" name="output_format"></select>
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="source_systems">Source systems</label>
-            <input id="source_systems" name="source_systems" placeholder="SAP, Salesforce" />
-          </div>
-
-          <div class="field">
-            <label for="sla">SLA</label>
-            <input id="sla" name="sla" placeholder="99.9% availability, refreshed by 6am" />
-          </div>
-
-          <div class="field">
-            <label for="tags">Tags</label>
-            <input id="tags" name="tags" placeholder="comma, separated, tags" />
-          </div>
-
-          <label class="checkbox">
-            <input id="contains_pii" name="contains_pii" type="checkbox" />
-            <span>Contains PII / sensitive personal data</span>
-          </label>
-
-          <input type="hidden" id="product_id" />
-          <div class="form-actions">
-            <button type="submit" class="btn primary">Save data product</button>
-          </div>
-          <p id="form-msg" class="form-msg"></p>
-        </form>
-      </div>
-    </section>
-
-    <!-- Contract view -->
-    <section id="view-contract" class="view hidden">
-      <button id="contract-back" class="btn ghost small">← Back to catalog</button>
-      <div class="grid">
-        <!-- AI assistant for contracts -->
-        <aside class="card assistant">
-          <div class="card-head">
-            <h2>✨ Contract Assistant</h2>
-            <span id="ai-status-c" class="pill">checking…</span>
-          </div>
-          <p class="muted">Paste a <b>CSV header row</b>, a <b>JSON sample</b>, or
-            describe the data. The assistant infers the schema, quality rules
-            and SLOs. Edit anything afterwards.</p>
-          <textarea id="ai-prompt-c" rows="7"
-            placeholder="e.g.&#10;order_id,dealer_id,order_date,amount,customer_email&#10;1001,D-22,2026-06-01,4200.50,jane@example.com&#10;&#10;Refreshed by 6am daily, 99.9% availability."></textarea>
-          <button id="ai-fill-c" class="btn primary full">Draft the contract</button>
-          <p id="ai-note-c" class="ai-note"></p>
-        </aside>
-
-        <!-- Contract editor -->
-        <form id="contract-form" class="card form">
-          <div class="card-head">
-            <h2 id="contract-title">Data Contract</h2>
-            <button type="button" id="contract-delete" class="btn danger small hidden">Delete</button>
-          </div>
-          <p id="contract-product" class="muted"></p>
-
-          <div class="row">
-            <div class="field">
-              <label for="c-version">Version</label>
-              <input id="c-version" value="1.0.0" />
-            </div>
-            <div class="field">
-              <label for="c-status">Status</label>
-              <select id="c-status"></select>
-            </div>
-          </div>
-
-          <h3 class="section-h">Schema</h3>
-          <div class="schema-head">
-            <span>Field</span><span>Type</span><span>Req</span><span>PII</span><span>Description</span><span></span>
-          </div>
-          <div id="schema-rows"></div>
-          <button type="button" id="add-field" class="btn ghost small">+ Add field</button>
-
-          <h3 class="section-h">Quality rules</h3>
-          <div class="rule-head">
-            <span>Field</span><span>Rule</span><span>Description</span><span></span>
-          </div>
-          <div id="rule-rows"></div>
-          <button type="button" id="add-rule" class="btn ghost small">+ Add rule</button>
-
-          <h3 class="section-h">Service-level objectives</h3>
-          <div class="row3">
-            <div class="field">
-              <label for="c-availability">Availability</label>
-              <input id="c-availability" placeholder="99.9%" />
-            </div>
-            <div class="field">
-              <label for="c-freshness">Freshness</label>
-              <input id="c-freshness" placeholder="Refreshed by 6am daily" />
-            </div>
-            <div class="field">
-              <label for="c-latency">Max latency</label>
-              <input id="c-latency" placeholder="< 200ms p95" />
-            </div>
-          </div>
-
-          <input type="hidden" id="contract-product-id" />
-          <div class="form-actions">
-            <button type="submit" class="btn primary">Save contract</button>
-          </div>
-          <p id="contract-msg" class="form-msg"></p>
-        </form>
-      </div>
-    </section>
-
-    <!-- Catalog view -->
-    <section id="view-catalog" class="view hidden">
-      <div class="card">
-        <div class="card-head">
-          <h2>Registered Data Products</h2>
-          <input id="search" class="search" placeholder="Search…" />
         </div>
-        <div id="catalog-list" class="catalog"></div>
+        <textarea id="ai-reg-prompt" rows="5"
+          placeholder="e.g. A daily sales-by-dealer table sourced from SAP and Salesforce, owned by Jane Doe (jane.doe@example.com). Contains customer PII. Needs to refresh by 6am, 99.9% availability, Finance domain."
+          style="width:100%;padding:12px;border:1px solid rgba(232,77,28,.3);border-radius:8px;font:inherit;font-size:14px;background:rgba(255,255,255,.7);resize:vertical;"></textarea>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;">
+          <button class="btn primary" id="ai-reg-fill">&#9889; Fill form with AI</button>
+          <p id="ai-reg-note" style="font-size:12px;color:var(--ink-2);margin:0;flex:1;"></p>
+        </div>
       </div>
-    </section>
-  </main>
 
-  <div id="toast" class="toast hidden"></div>
+      <div style="display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--muted);">
+        <div style="flex:1;height:1px;background:var(--line);"></div>
+        <span style="font-size:13px;font-weight:600;">OR</span>
+        <div style="flex:1;height:1px;background:var(--line);"></div>
+      </div>
 
-  <script src="/static/app.js"></script>
+      <div class="manual-card">
+        <div class="manual-card-icon">&#128196;</div>
+        <div class="manual-card-body">
+          <h3>Manual Registration</h3>
+          <p>Fill your form manually</p>
+          <p>Fill out the form step by step. Provide as much detail as possible including business function, data sources, use cases, tags &amp; more.</p>
+          <br/>
+          <button class="btn ghost" id="start-manual">Fill Manually</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stepper form -->
+    <div id="register-form-wrapper" class="hidden">
+      <!-- Stepper -->
+      <div class="stepper" id="stepper">
+        <div class="step active" data-step="1">
+          <div class="step-circle">1</div>
+          <div class="step-label">Basic Information</div>
+        </div>
+        <div class="step" data-step="2">
+          <div class="step-circle">2</div>
+          <div class="step-label">Input Ports – Define Data Sources</div>
+        </div>
+        <div class="step" data-step="3">
+          <div class="step-circle">3</div>
+          <div class="step-label">Source Data Information</div>
+        </div>
+        <div class="step" data-step="4">
+          <div class="step-circle">4</div>
+          <div class="step-label">Output Ports</div>
+        </div>
+        <div class="step" data-step="5">
+          <div class="step-circle">5</div>
+          <div class="step-label">Tags</div>
+        </div>
+      </div>
+
+      <!-- Step 1: Basic Info -->
+      <div class="step-content" id="step-1">
+        <div class="step-content-header">
+          <div class="step-content-icon">&#128196;</div>
+          <div>
+            <h2>Basic Information</h2>
+            <p>Provide core details about your data product</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="name">Product Name <span class="req">*</span></label>
+          <input id="name" name="name" type="text" required maxlength="200" placeholder="e.g. Sales Performance Analytics Data Product" />
+        </div>
+        <div class="field">
+          <label for="description">Description <span class="req">*</span></label>
+          <textarea id="description" name="description" rows="4" placeholder="Provide a detailed description of this data product, its purpose, and key features..."></textarea>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
+            <button type="button" class="btn ghost sm" id="improve-desc-btn">&#10024; Improve with AI</button>
+            <p id="improve-desc-note" class="ai-note" style="margin:0;"></p>
+          </div>
+        </div>
+        <!-- AI quality / clarification panel -->
+        <div id="clarify-panel" class="hidden" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <span style="font-size:22px;line-height:1;">&#129302;</span>
+            <div style="flex:1;">
+              <p id="clarify-message" style="font-size:14px;font-weight:600;color:#1e40af;margin:0 0 12px;"></p>
+              <div id="clarify-questions" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="button" id="clarify-submit" class="btn primary sm">&#9889; Submit answers</button>
+                <button type="button" id="clarify-skip" class="btn ghost sm">Skip — proceed anyway</button>
+              </div>
+              <p id="clarify-note" class="ai-note" style="margin-top:8px;"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Duplicate warning shown after name+description filled -->
+        <div id="duplicate-warning" class="hidden" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:12px;">
+          <p id="duplicate-warning-text" style="font-size:13px;font-weight:600;color:#92400e;margin:0 0 8px;"></p>
+          <div id="duplicate-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="domain">Business Function / Domain</label>
+            <input id="domain" name="domain" type="text" placeholder="e.g. Sales, Finance, Marketing" />
+          </div>
+          <div class="field">
+            <label for="owner_name">Owner Name</label>
+            <input id="owner_name" name="owner_name" type="text" />
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="owner_email">Owner Email</label>
+            <input id="owner_email" name="owner_email" type="email" />
+          </div>
+          <div class="field">
+            <label for="classification">Classification</label>
+            <select id="classification" name="classification"></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="update_frequency">Update Frequency</label>
+            <select id="update_frequency" name="update_frequency"></select>
+          </div>
+          <div class="field">
+            <label for="output_format">Output Format</label>
+            <select id="output_format" name="output_format"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="sla">SLA</label>
+          <input id="sla" name="sla" type="text" placeholder="e.g. 99.9% availability, refreshed by 6am" />
+        </div>
+        <label class="checkbox-row">
+          <input id="contains_pii" name="contains_pii" type="checkbox" />
+          <span>Contains PII / sensitive personal data</span>
+        </label>
+        <input type="hidden" id="product_id" />
+        <div class="step-footer">
+          <div class="step-footer-left">
+            <button type="button" class="btn ghost sm" id="step1-cancel">Cancel</button>
+          </div>
+          <div class="step-footer-right">
+            <button type="button" class="btn primary" id="step1-next">Next &rsaquo;</button>
+          </div>
+        </div>
+        <p id="form-msg" class="form-msg"></p>
+      </div>
+
+      <!-- Step 2: Input Ports -->
+      <div class="step-content hidden" id="step-2">
+        <div class="step-content-header">
+          <div class="step-content-icon">&#128257;</div>
+          <div>
+            <h2>Input Ports – Define Data Sources</h2>
+            <p>Raw data ingested directly from operational systems &amp; external APIs</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="source_systems">Source Tables / Systems <span class="req">*</span></label>
+          <div class="tag-input-wrap" id="source-tags-wrap">
+            <input type="text" class="tag-input-field" id="source-tag-input" placeholder="Type and press Enter…" />
+            <button type="button" class="tag-add-btn" id="source-tag-add">+</button>
+          </div>
+          <input type="hidden" id="source_systems" name="source_systems" />
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;">
+            <button type="button" class="btn ghost sm" id="suggest-sources-btn">&#129302; Suggest sources</button>
+            <p id="suggest-sources-note" class="ai-note" style="margin:0;"></p>
+          </div>
+          <div id="sources-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+        </div>
+        <div class="step-footer">
+          <div class="step-footer-left">
+            <button type="button" class="btn ghost sm" id="step2-cancel">Cancel</button>
+          </div>
+          <div class="step-footer-right">
+            <button type="button" class="btn ghost sm" id="step2-back">&lsaquo; Back</button>
+            <button type="button" class="btn primary" id="step2-next">Next &rsaquo;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Source Data -->
+      <div class="step-content hidden" id="step-3">
+        <div class="step-content-header">
+          <div class="step-content-icon">&#128202;</div>
+          <div>
+            <h2>Source Data Information</h2>
+            <p>Additional context about your source data</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="ai-prompt-s3">Describe the source data or paste a sample</label>
+          <textarea id="ai-prompt-s3" rows="4" placeholder="e.g. order_id,dealer_id,order_date,amount&#10;1001,D-22,2026-06-01,4200.50"></textarea>
+        </div>
+        <p class="ai-note" id="ai-note-s3"></p>
+        <div class="step-footer">
+          <div class="step-footer-left">
+            <button type="button" class="btn ghost sm" id="step3-cancel">Cancel</button>
+          </div>
+          <div class="step-footer-right">
+            <button type="button" class="btn ghost sm" id="step3-back">&lsaquo; Back</button>
+            <button type="button" class="btn primary" id="step3-next">Next &rsaquo;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Output Ports / Contract -->
+      <div class="step-content hidden" id="step-4">
+        <div class="step-content-header">
+          <div class="step-content-icon">&#128200;</div>
+          <div>
+            <h2>Output Ports</h2>
+            <p>Define what this data product produces</p>
+          </div>
+        </div>
+        <!-- Contract section -->
+        <div class="ai-note" id="ai-status-c-wrap" style="margin-bottom:12px;">
+          AI: <span id="ai-status-c" class="pill checking">checking…</span>
+        </div>
+        <div class="field">
+          <label>Use AI to draft the data contract</label>
+          <textarea id="ai-prompt-c" rows="4" placeholder="Paste a CSV header or JSON sample to let the AI infer schema, quality rules, and SLOs…"></textarea>
+          <button type="button" class="btn ghost sm" id="ai-fill-c" style="margin-top:8px;">Draft with AI</button>
+          <p id="ai-note-c" class="ai-note"></p>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="c-version">Contract Version</label>
+            <input id="c-version" value="1.0.0" />
+          </div>
+          <div class="field">
+            <label for="c-status">Contract Status</label>
+            <select id="c-status"></select>
+          </div>
+        </div>
+        <div class="section-h">Schema</div>
+        <div class="schema-head">
+          <span>Field</span><span>Type</span><span>Req</span><span>PII</span><span>Description</span><span></span>
+        </div>
+        <div id="schema-rows"></div>
+        <button type="button" id="add-field" class="btn ghost sm" style="margin-bottom:16px;">+ Add field</button>
+        <div class="section-h">Quality rules</div>
+        <div class="rule-head">
+          <span>Field</span><span>Rule</span><span>Description</span><span></span>
+        </div>
+        <div id="rule-rows"></div>
+        <button type="button" id="add-rule" class="btn ghost sm" style="margin-bottom:16px;">+ Add rule</button>
+        <div class="section-h">Service-level objectives</div>
+        <div class="row3">
+          <div class="field">
+            <label for="c-availability">Availability</label>
+            <input id="c-availability" placeholder="99.9%" />
+          </div>
+          <div class="field">
+            <label for="c-freshness">Freshness</label>
+            <input id="c-freshness" placeholder="Refreshed by 6am daily" />
+          </div>
+          <div class="field">
+            <label for="c-latency">Max latency</label>
+            <input id="c-latency" placeholder="< 200ms p95" />
+          </div>
+        </div>
+        <div class="step-footer">
+          <div class="step-footer-left">
+            <button type="button" class="btn ghost sm" id="step4-cancel">Cancel</button>
+          </div>
+          <div class="step-footer-right">
+            <button type="button" class="btn ghost sm" id="step4-back">&lsaquo; Back</button>
+            <button type="button" class="btn primary" id="step4-next">Next &rsaquo;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Tags -->
+      <div class="step-content hidden" id="step-5">
+        <div class="step-content-header">
+          <div class="step-content-icon">&#127991;</div>
+          <div>
+            <h2>Tags</h2>
+            <p>Keywords that help classify, search, and quickly identify the data product</p>
+          </div>
+        </div>
+        <div class="field">
+          <label>Add Tags <span class="req">*</span></label>
+          <div class="tag-input-wrap" id="tags-wrap">
+            <input type="text" class="tag-input-field" id="tags-input" placeholder="Type and press Enter…" />
+            <button type="button" class="tag-add-btn" id="tags-add">+</button>
+          </div>
+          <input type="hidden" id="tags" name="tags" />
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;">
+            <button type="button" class="btn ghost sm" id="suggest-tags-btn">&#129302; Suggest tags</button>
+            <p id="suggest-tags-note" class="ai-note" style="margin:0;"></p>
+          </div>
+          <div id="tags-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+        </div>
+        <div class="step-footer">
+          <div class="step-footer-left">
+            <button type="button" class="btn ghost sm" id="step5-cancel">Cancel</button>
+          </div>
+          <div class="step-footer-right">
+            <button type="button" class="btn ghost sm" id="step5-back">&lsaquo; Back</button>
+            <button type="button" class="btn primary" id="step5-submit">Submit</button>
+          </div>
+        </div>
+        <p id="step5-msg" class="form-msg"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTRACT (reached from My Data Products or Catalog) ──────────── -->
+<section id="view-contract" class="view page hidden">
+  <div class="page-header">
+    <button class="back-btn" id="contract-back">&#8592; Back to catalog</button>
+    <h1 class="page-title" id="contract-title">Data Contract</h1>
+    <p id="contract-product" class="form-msg" style="margin-top:4px;"></p>
+  </div>
+  <div class="contract-layout">
+    <div class="section-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span>AI: <span id="ai-status" class="pill checking">checking…</span></span>
+        <button type="button" id="contract-delete" class="btn danger-ghost sm hidden">Delete contract</button>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="c2-version">Version</label>
+          <input id="c2-version" value="1.0.0" />
+        </div>
+        <div class="field">
+          <label for="c2-status">Status</label>
+          <select id="c2-status"></select>
+        </div>
+      </div>
+      <div class="section-h">Schema</div>
+      <div class="schema-head">
+        <span>Field</span><span>Type</span><span>Req</span><span>PII</span><span>Description</span><span></span>
+      </div>
+      <div id="schema-rows-2"></div>
+      <button type="button" id="add-field-2" class="btn ghost sm" style="margin-bottom:16px;">+ Add field</button>
+      <div class="section-h">Quality rules</div>
+      <div class="rule-head">
+        <span>Field</span><span>Rule</span><span>Description</span><span></span>
+      </div>
+      <div id="rule-rows-2"></div>
+      <button type="button" id="add-rule-2" class="btn ghost sm" style="margin-bottom:16px;">+ Add rule</button>
+      <div class="section-h">Service-level objectives</div>
+      <div class="row3">
+        <div class="field"><label for="c2-availability">Availability</label><input id="c2-availability" placeholder="99.9%" /></div>
+        <div class="field"><label for="c2-freshness">Freshness</label><input id="c2-freshness" placeholder="Refreshed by 6am daily" /></div>
+        <div class="field"><label for="c2-latency">Max latency</label><input id="c2-latency" placeholder="< 200ms p95" /></div>
+      </div>
+      <input type="hidden" id="contract-product-id" />
+      <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn ghost" id="contract-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="contract-save">Save contract</button>
+      </div>
+      <p id="contract-msg" class="form-msg"></p>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCT DETAIL ────────────────────────────────────────────────── -->
+<section id="view-detail" class="view page hidden">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <button class="breadcrumb-link" data-view="home">Home</button>
+      <span class="breadcrumb-sep">/</span>
+      <button class="breadcrumb-link" id="detail-back-browse">Browse Data Products</button>
+    </div>
+    <h1 class="page-title" id="detail-title"></h1>
+  </div>
+  <div class="detail-layout">
+    <!-- Summary row -->
+    <div class="detail-summary-row">
+      <div class="detail-summary-main">
+        <div class="detail-kv" id="detail-kv"></div>
+        <p class="detail-desc" id="detail-desc"></p>
+        <div class="detail-tags" id="detail-tags"></div>
+      </div>
+      <div class="detail-summary-side">
+        <div class="detail-actions">
+          <button class="copy-link-btn">&#128279; Copy Link</button>
+          <button class="fav-btn">&#9825; Favourite</button>
+          <button class="chat-btn">Chat with Vega</button>
+          <button class="request-btn">Request Access</button>
+        </div>
+      </div>
+    </div>
+    <!-- Similar products banner (shown when AI finds related products) -->
+    <div id="similar-products-bar" class="hidden" style="background:var(--orange-light);border:1px solid rgba(232,77,28,.2);border-radius:var(--radius);padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:13px;font-weight:600;">&#128279; You might also like:</span>
+      <div id="similar-products-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+
+    <!-- Vega chat panel -->
+    <div id="vega-chat-panel" class="hidden" style="background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <div class="section-icon">&#129302;</div>
+        <div>
+          <h3 style="font-size:15px;font-weight:700;margin:0;">Chat with Vega</h3>
+          <p style="font-size:13px;color:var(--muted);margin:2px 0 0;">Ask anything about this data product</p>
+        </div>
+        <button id="vega-close" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);line-height:1;">&times;</button>
+      </div>
+      <div id="vega-messages" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;min-height:60px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input id="vega-input" type="text" class="search-input" placeholder="e.g. Is this suitable for a real-time dashboard?" style="flex:1;" />
+        <button id="vega-send" class="btn primary sm">Send</button>
+      </div>
+      <p id="vega-note" class="ai-note"></p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="detail-tabs" style="background:#f9fafb;border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;">
+      <button class="detail-tab active" data-detail-tab="overview">Overview</button>
+      <button class="detail-tab" data-detail-tab="input-ports">Input Ports</button>
+      <button class="detail-tab" data-detail-tab="source-data">Source Data Information</button>
+      <button class="detail-tab" data-detail-tab="data-quality">Data Quality</button>
+      <button class="detail-tab" data-detail-tab="output-ports">Output Ports</button>
+    </div>
+    <!-- Panes -->
+    <div class="detail-pane" id="pane-overview">
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-icon">&#128203;</div>
+          <div>
+            <h3>Business Context</h3>
+          </div>
+        </div>
+        <div class="field-grid" id="overview-fields"></div>
+      </div>
+    </div>
+    <div class="detail-pane hidden" id="pane-input-ports">
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-icon">&#128257;</div>
+          <div><h3>Source-Aligned Inputs</h3><p>Raw data ingested directly from operational systems &amp; external APIs</p></div>
+        </div>
+        <div id="input-ports-content" class="kv-value"></div>
+      </div>
+    </div>
+    <div class="detail-pane hidden" id="pane-source-data">
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-icon">&#128202;</div>
+          <div><h3>Source Data Information</h3></div>
+        </div>
+        <div id="source-data-content" class="kv-value"></div>
+      </div>
+    </div>
+    <div class="detail-pane hidden" id="pane-data-quality">
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-icon">&#9989;</div>
+          <div><h3>Data Quality</h3></div>
+        </div>
+        <div id="data-quality-content"></div>
+      </div>
+    </div>
+    <div class="detail-pane hidden" id="pane-output-ports">
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-icon">&#128200;</div>
+          <div><h3>Data Product</h3><p>What this data product produces</p></div>
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Output ports define the data made available by this data product for consumption by other systems, applications, or data products.</p>
+        <div id="output-ports-content"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/static/app.js"></script>
 </body>
 </html>

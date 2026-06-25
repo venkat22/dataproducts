@@ -76,10 +76,33 @@ def _coerce(value: str, allowed: list, default: str) -> str:
     return default
 
 
-def assist_with_claude(prompt: str) -> dict:
+def _make_client():
+    if settings.use_bedrock:
+        from anthropic import AnthropicBedrock
+        if settings.aws_bearer_token_bedrock:
+            # Bearer-token auth (Claude Code / SSO style)
+            return AnthropicBedrock(
+                aws_region=settings.region,
+                aws_access_key=None,
+                aws_secret_key=None,
+                aws_session_token=None,
+                base_url=f"https://bedrock-runtime.{settings.region}.amazonaws.com",
+                default_headers={
+                    "Authorization": f"Bearer {settings.aws_bearer_token_bedrock}"
+                },
+            )
+        # IAM key/secret auth
+        return AnthropicBedrock(
+            aws_access_key=settings.aws_access_key_id,
+            aws_secret_key=settings.aws_secret_access_key,
+            aws_region=settings.region,
+        )
     from anthropic import Anthropic
+    return Anthropic(api_key=settings.anthropic_api_key)
 
-    client = Anthropic(api_key=settings.anthropic_api_key)
+
+def assist_with_claude(prompt: str) -> dict:
+    client = _make_client()
     message = client.messages.create(
         model=settings.anthropic_model,
         max_tokens=1024,
@@ -168,10 +191,10 @@ def assist_with_fallback(prompt: str) -> dict:
 
 def generate_fields(prompt: str):
     """Returns (fields, source, note)."""
-    if settings.anthropic_api_key:
+    if settings.ai_enabled:
         try:
             return assist_with_claude(prompt), "claude", ""
-        except Exception as exc:  # fall back gracefully on any API error
+        except Exception as exc:
             return (
                 assist_with_fallback(prompt),
                 "fallback",
@@ -180,7 +203,7 @@ def generate_fields(prompt: str):
     return (
         assist_with_fallback(prompt),
         "fallback",
-        "No ANTHROPIC_API_KEY configured; used local keyword extraction.",
+        "No AI credentials configured; used local keyword extraction.",
     )
 
 
@@ -234,9 +257,7 @@ def _clean_contract(raw: dict) -> dict:
 
 
 def contract_with_claude(prompt: str) -> dict:
-    from anthropic import Anthropic
-
-    client = Anthropic(api_key=settings.anthropic_api_key)
+    client = _make_client()
     message = client.messages.create(
         model=settings.anthropic_model,
         max_tokens=1500,
@@ -348,7 +369,7 @@ def contract_with_fallback(prompt: str) -> dict:
 
 def generate_contract(prompt: str):
     """Returns (contract, source, note)."""
-    if settings.anthropic_api_key:
+    if settings.ai_enabled:
         try:
             return contract_with_claude(prompt), "claude", ""
         except Exception as exc:
@@ -358,7 +379,377 @@ def generate_contract(prompt: str):
                 f"Claude unavailable ({exc.__class__.__name__}); inferred schema locally.",
             )
     result = contract_with_fallback(prompt)
-    note = "No ANTHROPIC_API_KEY configured; inferred schema locally."
+    note = "No AI credentials configured; inferred schema locally."
     if not result["schema_fields"]:
         note += " Tip: paste a CSV header row or a JSON sample to auto-detect fields."
     return result, "fallback", note
+
+
+# ── Improve description ───────────────────────────────────────────────────────
+
+def improve_description(name: str, domain: str, description: str) -> tuple[str, str]:
+    """Returns (improved_text, note)."""
+    prompt = f"Name: {name}\nDomain: {domain}\nDescription: {description}"
+    if settings.ai_enabled:
+        try:
+            client = _make_client()
+            msg = client.messages.create(
+                model=settings.anthropic_model,
+                max_tokens=300,
+                system=(
+                    "You are a data catalog editor. Rewrite the given data product description "
+                    "to be professional, clear and 2-3 sentences. Preserve all factual details. "
+                    "Return only the improved description text with no commentary or quotes."
+                ),
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
+            return text, ""
+        except Exception as exc:
+            pass
+    # fallback: capitalise + ensure ends with period
+    d = description.strip()
+    if d and not d[0].isupper():
+        d = d[0].upper() + d[1:]
+    if d and not d.endswith("."):
+        d += "."
+    return d, "AI unavailable; minor formatting applied."
+
+
+# ── Suggest sources ───────────────────────────────────────────────────────────
+
+_DOMAIN_SOURCES = {
+    "finance": ["SAP S/4HANA", "Oracle Financials", "Workday", "Anaplan"],
+    "sales": ["Salesforce CRM", "SAP SD", "HubSpot", "Microsoft Dynamics"],
+    "marketing": ["Google Analytics", "Salesforce Marketing Cloud", "HubSpot", "Adobe Analytics"],
+    "supply chain": ["SAP SCM", "Oracle SCM", "Blue Yonder", "Kinaxis"],
+    "hr": ["Workday HCM", "SAP SuccessFactors", "ADP", "BambooHR"],
+    "manufacturing": ["SAP PP", "Siemens MES", "Rockwell Automation", "OSIsoft PI"],
+}
+
+def suggest_sources(name: str, domain: str, description: str) -> tuple[list, str]:
+    prompt = f"Data product name: {name}\nDomain: {domain}\nDescription: {description}\nList 4-6 likely source systems as a JSON array of short strings."
+    if settings.ai_enabled:
+        try:
+            client = _make_client()
+            msg = client.messages.create(
+                model=settings.anthropic_model,
+                max_tokens=200,
+                system="Return ONLY a JSON array of source system name strings. No prose.",
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+            m = re.search(r"\[.*\]", text, re.DOTALL)
+            if m:
+                suggestions = json.loads(m.group(0))
+                return [str(s).strip() for s in suggestions if s], ""
+        except Exception:
+            pass
+    # fallback
+    lower = (domain + " " + description).lower()
+    for key, sources in _DOMAIN_SOURCES.items():
+        if key in lower:
+            return sources, "AI unavailable; domain-based suggestions used."
+    return ["SAP", "Salesforce", "Snowflake", "Oracle"], "AI unavailable; generic suggestions used."
+
+
+# ── Suggest tags ─────────────────────────────────────────────────────────────
+
+def suggest_tags(name: str, domain: str, description: str, source_systems: str) -> tuple[list, str]:
+    prompt = (
+        f"Data product name: {name}\nDomain: {domain}\n"
+        f"Description: {description}\nSources: {source_systems}\n"
+        "Suggest 6-8 lowercase tags as a JSON array."
+    )
+    if settings.ai_enabled:
+        try:
+            client = _make_client()
+            msg = client.messages.create(
+                model=settings.anthropic_model,
+                max_tokens=150,
+                system="Return ONLY a JSON array of lowercase tag strings. No prose.",
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+            m = re.search(r"\[.*\]", text, re.DOTALL)
+            if m:
+                suggestions = json.loads(m.group(0))
+                return [str(s).strip().lower() for s in suggestions if s], ""
+        except Exception:
+            pass
+    # fallback: derive from domain + name words
+    words = re.findall(r"[a-z]+", (name + " " + domain + " " + description).lower())
+    stop = {"a", "an", "the", "of", "for", "and", "or", "is", "in", "to", "with", "data", "product"}
+    tags = list(dict.fromkeys(w for w in words if w not in stop and len(w) > 2))[:8]
+    return tags, "AI unavailable; keyword-based tags used."
+
+
+# ── Natural language search ───────────────────────────────────────────────────
+
+def search_interpret(query: str, all_products: list) -> tuple[dict, str]:
+    """Returns (filters_dict, note). filters_dict keys: domains, classifications, tags, contains_pii, rerank_ids."""
+    catalog_summary = "\n".join(
+        f"- id={p['id']} name={p['name']!r} domain={p['domain']!r} tags={p['tags']!r} classification={p['classification']!r}"
+        for p in all_products[:60]
+    )
+    prompt = (
+        f"User query: {query}\n\nAvailable data products:\n{catalog_summary}\n\n"
+        "Return a JSON object with keys:\n"
+        "- domains: array of domain strings that match the query (from the catalog)\n"
+        "- classifications: array of classification strings (Public/Internal/Confidential/Restricted)\n"
+        "- tags: array of tag strings\n"
+        "- contains_pii: true, false, or null\n"
+        f"- rerank_ids: array of product ids ordered by relevance to the query (most relevant first, include all that match)\n"
+    )
+    if settings.ai_enabled:
+        try:
+            client = _make_client()
+            msg = client.messages.create(
+                model=settings.anthropic_model,
+                max_tokens=400,
+                system="You help users search a data product catalog. Return ONLY a JSON object. No prose.",
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+            m = re.search(r"\{.*\}", text, re.DOTALL)
+            if m:
+                raw = json.loads(m.group(0))
+                return {
+                    "domains": [str(d) for d in raw.get("domains", [])],
+                    "classifications": [str(c) for c in raw.get("classifications", [])],
+                    "tags": [str(t) for t in raw.get("tags", [])],
+                    "contains_pii": raw.get("contains_pii"),
+                    "rerank_ids": [int(i) for i in raw.get("rerank_ids", [])],
+                }, ""
+        except Exception as exc:
+            pass
+    # fallback: simple keyword matching
+    lower = query.lower()
+    domains = [p["domain"] for p in all_products if p["domain"] and p["domain"].lower() in lower]
+    cls_match = [c for c in CLASSIFICATIONS if c.lower() in lower]
+    contains_pii = True if "pii" in lower or "personal" in lower else None
+    return {
+        "domains": list(dict.fromkeys(domains)),
+        "classifications": cls_match,
+        "tags": [],
+        "contains_pii": contains_pii,
+        "rerank_ids": [],
+    }, "AI unavailable; keyword-based search used."
+
+
+# ── Chat with Vega ────────────────────────────────────────────────────────────
+
+def chat_with_product(product: dict, contract: dict | None, message: str) -> tuple[str, str]:
+    """Returns (reply, note)."""
+    ctx_parts = [
+        f"Name: {product['name']}",
+        f"Domain: {product.get('domain', '')}",
+        f"Classification: {product.get('classification', '')}",
+        f"Owner: {product.get('owner_name', '')} <{product.get('owner_email', '')}>",
+        f"Description: {product.get('description', '')}",
+        f"Sources: {product.get('source_systems', '')}",
+        f"Update frequency: {product.get('update_frequency', '')}",
+        f"Output format: {product.get('output_format', '')}",
+        f"SLA: {product.get('sla', '')}",
+        f"Contains PII: {product.get('contains_pii', False)}",
+        f"Tags: {product.get('tags', '')}",
+    ]
+    if contract:
+        fields = contract.get("schema_fields", [])
+        if fields:
+            ctx_parts.append("Schema fields: " + ", ".join(f"{f['name']}({f['type']})" for f in fields[:15]))
+        ctx_parts.append(f"SLO availability: {contract.get('slo_availability', '')}")
+        ctx_parts.append(f"SLO freshness: {contract.get('slo_freshness', '')}")
+
+    context = "\n".join(ctx_parts)
+    system = (
+        "You are Vega, an AI assistant for a data product marketplace. "
+        "Answer the user's question about the following data product concisely and helpfully. "
+        "If you don't know, say so honestly.\n\n"
+        f"DATA PRODUCT:\n{context}"
+    )
+    if settings.ai_enabled:
+        try:
+            client = _make_client()
+            msg = client.messages.create(
+                model=settings.anthropic_model,
+                max_tokens=400,
+                system=system,
+                messages=[{"role": "user", "content": message}],
+            )
+            reply = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
+            return reply, ""
+        except Exception as exc:
+            pass
+    # fallback: structured summary
+    reply = (
+        f"Here's what I know about **{product['name']}**:\n"
+        f"Domain: {product.get('domain', 'N/A')} | "
+        f"Updated: {product.get('update_frequency', 'N/A')} | "
+        f"Format: {product.get('output_format', 'N/A')} | "
+        f"SLA: {product.get('sla', 'N/A')} | "
+        f"PII: {'Yes' if product.get('contains_pii') else 'No'}"
+    )
+    return reply, "AI unavailable; showing product metadata."
+
+
+# ── Input quality check + clarifying questions ───────────────────────────────
+
+_QUALITY_SYSTEM = """You are a data catalog quality coach helping producers register data products well.
+
+Evaluate the provided inputs and decide if they are specific enough for a proper catalog entry.
+
+Inputs are considered POOR/VAGUE if any of these apply:
+- Name is generic, a single word, random characters, or clearly a test (e.g. "test", "data", "aaa", "product1", "xyz")
+- Description is missing, too short (< 15 words), or a copy of the name
+- Description is gibberish or contains only placeholder text
+- Domain is missing when name/description suggest a clear one
+- Source systems are missing when description implies specific sources
+
+If inputs are poor, return a JSON object with:
+{
+  "ok": false,
+  "questions": ["<specific question 1>", "<specific question 2>", ...],
+  "message": "<one sentence explaining why clarification is needed>"
+}
+
+Ask 2-4 targeted questions. Questions should be concrete and answerable, e.g.:
+- "What business function or team does this data product serve? (e.g. Sales, Finance, Supply Chain)"
+- "What source systems does this data come from? (e.g. SAP, Salesforce, Oracle)"
+- "What problem does this data product solve for its consumers?"
+- "How often is this data updated? (e.g. daily at 6am, real-time)"
+
+If inputs are already good enough, return:
+{
+  "ok": true,
+  "message": "Looks good!",
+  "improved": {}
+}
+
+Return ONLY the JSON object. No prose, no markdown."""
+
+
+def clarify_inputs(name: str, description: str, domain: str,
+                   source_systems: str, answers: str) -> tuple[bool, list, dict, str]:
+    """Returns (ok, questions, improved_fields, message)."""
+    # Fast local check first — if clearly gibberish, don't even call the API
+    def _is_trivially_bad(s: str) -> bool:
+        s = s.strip().lower()
+        if not s or len(s) < 3:
+            return True
+        if re.match(r'^[a-z]{1,3}\d*$', s):  # "a", "bb", "abc1"
+            return True
+        if s in {"test", "data", "product", "hello", "foo", "bar", "temp", "xyz", "aaa", "bbb", "tbd", "n/a"}:
+            return True
+        return False
+
+    trivially_bad_name = _is_trivially_bad(name)
+    desc_too_short = len(description.strip().split()) < 8
+
+    prompt_parts = [f"Name: {name}", f"Description: {description}"]
+    if domain:
+        prompt_parts.append(f"Domain: {domain}")
+    if source_systems:
+        prompt_parts.append(f"Source systems: {source_systems}")
+    if answers:
+        prompt_parts.append(f"Producer's additional answers: {answers}")
+
+    user_content = "\n".join(prompt_parts)
+
+    if settings.ai_enabled:
+        try:
+            client = _make_client()
+            msg = client.messages.create(
+                model=settings.anthropic_model,
+                max_tokens=400,
+                system=_QUALITY_SYSTEM,
+                messages=[{"role": "user", "content": user_content}],
+            )
+            text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+            m = re.search(r"\{.*\}", text, re.DOTALL)
+            if m:
+                raw = json.loads(m.group(0))
+                ok = bool(raw.get("ok", True))
+                questions = [str(q) for q in raw.get("questions", [])]
+                improved = raw.get("improved", {})
+                message = str(raw.get("message", ""))
+                return ok, questions, improved, message
+        except Exception:
+            pass
+
+    # Fallback: simple heuristic
+    if trivially_bad_name or desc_too_short:
+        questions = []
+        if trivially_bad_name:
+            questions.append("What is the full, descriptive name of this data product? (e.g. 'Daily Sales by Dealer — SAP')")
+        if desc_too_short:
+            questions.append("What does this data product contain and what business problem does it solve?")
+        if not domain:
+            questions.append("Which business function or domain owns this data? (e.g. Finance, Sales, Supply Chain)")
+        if not source_systems:
+            questions.append("What source systems does this data come from? (e.g. SAP, Salesforce, Oracle)")
+        return False, questions, {}, "Some inputs are too vague — a few quick answers will make this product much easier to find."
+
+    return True, [], {}, "Looks good!"
+
+
+# ── Duplicate / similar product detection ────────────────────────────────────
+
+def find_similar_products(name: str, description: str, domain: str,
+                           source_systems: str, all_products: list) -> tuple[list, str]:
+    """Returns (similar_list, warning). similar_list items: {id, name, domain, reason}."""
+    if not all_products:
+        return [], ""
+
+    catalog = "\n".join(
+        f"id={p['id']} name={p['name']!r} domain={p['domain']!r} description={str(p.get('description',''))[:120]!r}"
+        for p in all_products[:80]
+    )
+    prompt = (
+        f"New product being registered:\nName: {name}\nDomain: {domain}\n"
+        f"Description: {description}\nSources: {source_systems}\n\n"
+        f"Existing catalog:\n{catalog}\n\n"
+        "Return a JSON array of objects for any existing products that are similar or potentially duplicate. "
+        "Each object: {\"id\": <int>, \"reason\": <short string>}. "
+        "Return empty array [] if no significant overlaps."
+    )
+    if settings.ai_enabled:
+        try:
+            client = _make_client()
+            msg = client.messages.create(
+                model=settings.anthropic_model,
+                max_tokens=300,
+                system="You detect duplicate or similar data products. Return ONLY a JSON array. No prose.",
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+            m = re.search(r"\[.*\]", text, re.DOTALL)
+            if m:
+                raw = json.loads(m.group(0))
+                id_map = {p["id"]: p for p in all_products}
+                results = []
+                for item in raw:
+                    pid = int(item.get("id", 0))
+                    if pid in id_map:
+                        p = id_map[pid]
+                        results.append({"id": pid, "name": p["name"], "domain": p.get("domain", ""), "reason": item.get("reason", "")})
+                warning = f"⚠️ {len(results)} similar product(s) found — consider reusing or extending them." if results else ""
+                return results, warning
+        except Exception:
+            pass
+
+    # fallback: simple name/domain overlap
+    name_lower = name.lower()
+    domain_lower = domain.lower()
+    results = []
+    for p in all_products:
+        score = 0
+        if domain_lower and p.get("domain", "").lower() == domain_lower:
+            score += 1
+        pname = p.get("name", "").lower()
+        common = sum(1 for w in name_lower.split() if len(w) > 3 and w in pname)
+        score += common
+        if score >= 2:
+            results.append({"id": p["id"], "name": p["name"], "domain": p.get("domain", ""), "reason": "Similar name/domain"})
+    warning = f"⚠️ {len(results)} similar product(s) found." if results else ""
+    return results, warning

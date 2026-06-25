@@ -104,3 +104,82 @@ class AssistContractResponse(BaseModel):
     contract: dict  # {schema_fields, quality_rules, slo_*}
     source: str
     note: str = ""
+
+
+# ── New AI assist schemas ─────────────────────────────────────────────────────
+
+class ImproveDescriptionRequest(BaseModel):
+    description: str = Field(..., min_length=1)
+    name: str = ""
+    domain: str = ""
+
+class ImproveDescriptionResponse(BaseModel):
+    improved: str
+    note: str = ""
+
+
+class SuggestRequest(BaseModel):
+    name: str = ""
+    domain: str = ""
+    description: str = ""
+    source_systems: str = ""
+
+class SuggestResponse(BaseModel):
+    suggestions: List[str]
+    note: str = ""
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(..., min_length=1)
+
+class SearchFilters(BaseModel):
+    domains: List[str] = []
+    classifications: List[str] = []
+    tags: List[str] = []
+    contains_pii: Optional[bool] = None
+    rerank_ids: List[int] = []  # product IDs in relevance order (best first)
+
+class SearchAssistResponse(BaseModel):
+    filters: SearchFilters
+    note: str = ""
+
+
+class ChatRequest(BaseModel):
+    product_id: int
+    message: str = Field(..., min_length=1)
+
+class ChatResponse(BaseModel):
+    reply: str
+    note: str = ""
+
+
+class SimilarProduct(BaseModel):
+    id: int
+    name: str
+    domain: str = ""
+    reason: str = ""
+
+class DuplicateCheckRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    description: str = ""
+    domain: str = ""
+    source_systems: str = ""
+
+class DuplicateCheckResponse(BaseModel):
+    similar: List[SimilarProduct] = []
+    warning: str = ""
+    note: str = ""
+
+
+class ClarifyRequest(BaseModel):
+    name: str = ""
+    description: str = ""
+    domain: str = ""
+    source_systems: str = ""
+    answers: str = ""  # user's answers to previous questions (empty on first call)
+
+class ClarifyResponse(BaseModel):
+    ok: bool              # True = input is good enough, False = needs clarification
+    questions: List[str] = []   # follow-up questions when ok=False
+    improved: dict = {}   # filled fields when ok=True or answers provided
+    message: str = ""     # short explanation shown to user
