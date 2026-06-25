@@ -657,12 +657,15 @@ $('#step1-next')?.addEventListener('click', async () => {
   if (!name) { const msg = $('#form-msg'); msg.textContent = 'Product Name is required.'; msg.className = 'form-msg err'; return; }
   $('#form-msg').textContent = '';
 
-  // Run quality check before advancing — if panel is already shown, don't double-fire
-  if (clarifyAllowed && !$('#clarify-panel')?.classList.contains('hidden') === false) {
+  // Always block if clarify panel is currently visible — user must answer or skip first
+  if (!$('#clarify-panel')?.classList.contains('hidden')) return;
+
+  // Run quality check (fires if the blur debounce hasn't triggered yet)
+  if (clarifyAllowed) {
     await runClarifyCheck();
-    // If panel appeared, stop here — user must answer or skip first
     if (!$('#clarify-panel')?.classList.contains('hidden')) return;
   }
+
   showStep(2);
 });
 
