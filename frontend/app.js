@@ -9,7 +9,15 @@ const api = (path, opts) => fetch(`/api${path}`, opts).then(async (r) => {
 const $ = (sel) => document.querySelector(sel);
 const FIELD_KEYS = [
   "name", "description", "domain", "owner_name", "owner_email",
-  "classification", "update_frequency", "output_format", "sla",
+  "classification", "update_frequency", "output_format", "sla", "tags",
+];
+
+// Demo data assets (Snowflake tables/views a producer can pick from)
+const DEMO_DATA_ASSETS = [
+  'inventory_health_dp', 'sales_order_backlog_dp', 'customer_360_dp',
+  'finance_gl_summary_dp', 'marketing_campaign_dp', 'hr_workforce_dp',
+  'iot_telemetry_dp', 'pricing_quote_dp', 'nrr_dashboard_dp',
+  'supply_chain_forecast_dp', 'product_quality_dp', 'dealer_sales_dp',
 ];
 
 let allProducts = [];
@@ -36,10 +44,40 @@ function switchView(view) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Wire nav links + hero buttons
+// Wire nav links + hero buttons + brand logo
 document.querySelectorAll('[data-view]').forEach((el) => {
   el.addEventListener('click', () => switchView(el.dataset.view));
 });
+
+// Hero search
+$('#hero-search-go')?.addEventListener('click', doHeroSearch);
+$('#hero-search-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') doHeroSearch(); });
+document.querySelectorAll('.hero-kw-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const kw = chip.dataset.kw;
+    const inp = $('#hero-search-input');
+    if (inp) inp.value = kw;
+    doHeroSearch();
+  });
+});
+
+function doHeroSearch() {
+  const q = $('#hero-search-input')?.value.trim() || '';
+  switchView('browse');
+  const searchInp = $('#search');
+  if (searchInp && q) {
+    searchInp.value = q;
+    // Activate AI search mode for hero queries
+    aiSearchMode = true;
+    const btn = $('#ai-search-btn');
+    if (btn) {
+      btn.style.background = 'var(--orange-light)';
+      btn.style.color = 'var(--orange)';
+      btn.style.borderColor = 'var(--orange)';
+    }
+    setTimeout(() => runAiSearch(q), 300);
+  }
+}
 
 // ── Toast ────────────────────────────────────────────────────────────
 let toastTimer;
@@ -69,9 +107,11 @@ async function bootstrap() {
   try {
     const opts = await api('/options');
     OPTIONS = opts;
-    fillSelect('#classification', opts.classifications);
-    fillSelect('#update_frequency', opts.frequencies);
-    fillSelect('#output_format', opts.formats);
+    // Step 3 selects (new names)
+    fillSelect('#classification-sel', opts.classifications);
+    fillSelect('#update_frequency-sel', opts.frequencies);
+    fillSelect('#output_format-sel', opts.formats);
+    // Contract selects
     fillSelect('#c-status', opts.contract_statuses);
     fillSelect('#c2-status', opts.contract_statuses);
     buildDomainFilters();
@@ -132,23 +172,29 @@ let activeFilters = { domains: new Set(), classifications: new Set(), scope: 'al
 
 function buildDomainFilters() {
   const domains = [...new Set(allProducts.map(p => p.domain).filter(Boolean))].sort();
-  const box = $('#domain-filters');
-  if (!box) return;
-  box.innerHTML = domains.map(d => `
-    <label class="filter-check">
-      <input type="checkbox" class="domain-check" value="${esc(d)}" />
-      ${esc(d)}
-    </label>
-    <div class="filter-child" id="subdomain-${esc(d).replace(/\s+/g,'-')}"></div>
-  `).join('');
-  box.querySelectorAll('.domain-check').forEach((cb) => {
-    cb.addEventListener('change', () => {
-      if (cb.checked) activeFilters.domains.add(cb.value);
-      else activeFilters.domains.delete(cb.value);
-      renderActiveFilterChips();
-      renderCatalog();
+  // Build domain tab pills for browse view
+  const tabsRow = $('#domain-tabs');
+  if (tabsRow) {
+    tabsRow.innerHTML = `<button class="domain-tab-btn active" data-domain="">All (${allProducts.length})</button>` +
+      domains.map(d => {
+        const count = allProducts.filter(p => p.domain === d).length;
+        return `<button class="domain-tab-btn" data-domain="${esc(d)}">${esc(d)} (${count})</button>`;
+      }).join('');
+    tabsRow.querySelectorAll('.domain-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabsRow.querySelectorAll('.domain-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilters.domains.clear();
+        if (btn.dataset.domain) activeFilters.domains.add(btn.dataset.domain);
+        renderCatalog();
+      });
     });
-  });
+  }
+  // Keep legacy checkbox DOM for filter sync (hidden, no longer shown)
+  const box = $('#domain-filters');
+  if (box) {
+    box.innerHTML = domains.map(d => `<label class="filter-check" style="display:none;"><input type="checkbox" class="domain-check" value="${esc(d)}" /></label>`).join('');
+  }
 }
 
 function buildClassificationFilters() {
@@ -565,6 +611,7 @@ $('#start-manual')?.addEventListener('click', () => {
   renderStepper(1);
   showStep(1);
   setupClarifyTriggers();
+  initAssetPicker();
 });
 
 $('#ai-reg-fill')?.addEventListener('click', async () => {
@@ -591,6 +638,7 @@ $('#ai-reg-fill')?.addEventListener('click', async () => {
     hideClarifyPanel();
     showStep(1);
     setupClarifyTriggers();
+    initAssetPicker();
 
     // Apply all returned fields to the form
     const fields = res.fields;
@@ -645,7 +693,7 @@ function renderStepper(active) {
 }
 
 function showStep(n) {
-  for (let i = 1; i <= 5; i++) $(`#step-${i}`)?.classList.toggle('hidden', i !== n);
+  for (let i = 1; i <= 4; i++) $(`#step-${i}`)?.classList.toggle('hidden', i !== n);
   renderStepper(n);
   currentStep = n;
 }
@@ -675,15 +723,19 @@ $('#step2-next')?.addEventListener('click', () => showStep(3));
 
 $('#step3-cancel')?.addEventListener('click', showRegisterLanding);
 $('#step3-back')?.addEventListener('click', () => showStep(2));
-$('#step3-next')?.addEventListener('click', () => showStep(4));
+$('#step3-next')?.addEventListener('click', () => {
+  // Sync selects to hidden fields before advancing
+  const cls = $('#classification-sel'); if (cls) $('#classification').value = cls.value;
+  const freq = $('#update_frequency-sel'); if (freq) $('#update_frequency').value = freq.value;
+  const fmt = $('#output_format-sel'); if (fmt) $('#output_format').value = fmt.value;
+  const slaInp = $('#sla-inp'); if (slaInp) $('#sla').value = slaInp.value;
+  const piiCheck = $('#contains_pii_check'); if (piiCheck) $('#contains_pii').value = piiCheck.checked ? 'true' : 'false';
+  showStep(4);
+});
 
 $('#step4-cancel')?.addEventListener('click', showRegisterLanding);
 $('#step4-back')?.addEventListener('click', () => showStep(3));
-$('#step4-next')?.addEventListener('click', () => showStep(5));
-
-$('#step5-cancel')?.addEventListener('click', showRegisterLanding);
-$('#step5-back')?.addEventListener('click', () => showStep(4));
-$('#step5-submit')?.addEventListener('click', submitProduct);
+$('#step4-submit')?.addEventListener('click', submitProduct);
 
 // Tag input widgets
 function initTagInput(wrapId, inputId, addBtnId, hiddenId) {
@@ -742,15 +794,18 @@ initTagInput('tags-wrap', 'tags-input', 'tags-add', 'tags');
 
 // ── Submit product ───────────────────────────────────────────────────
 async function submitProduct() {
-  const msg = $('#step5-msg');
-  msg.textContent = ''; msg.className = 'form-msg';
+  const msg = $('#step5-msg') || $('#form-msg');
+  if (msg) { msg.textContent = ''; msg.className = 'form-msg'; }
 
   const payload = collectForm();
-  if (!payload.name) { msg.textContent = 'Product Name is required.'; msg.className = 'form-msg err'; return; }
+  if (!payload.name) {
+    if (msg) { msg.textContent = 'Product Name is required.'; msg.className = 'form-msg err'; }
+    return;
+  }
 
   const id = $('#product_id').value;
-  const btn = $('#step5-submit');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  const btn = $('#step4-submit') || $('#step5-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
   try {
     if (id) {
@@ -769,9 +824,9 @@ async function submitProduct() {
     resetRegisterForm();
     switchView('myproducts');
   } catch (err) {
-    msg.textContent = err.message; msg.className = 'form-msg err';
+    if (msg) { msg.textContent = err.message; msg.className = 'form-msg err'; }
   } finally {
-    btn.disabled = false; btn.textContent = 'Submit';
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit'; }
   }
 }
 
@@ -783,8 +838,12 @@ function collectForm() {
   const data = {};
   FIELD_KEYS.forEach(k => { data[k] = $(`#${k}`)?.value ?? ''; });
   data.source_systems = $('#source_systems')?.value ?? '';
-  data.tags = $('#tags')?.value ?? '';
-  data.contains_pii = $('#contains_pii')?.checked ?? false;
+  // contains_pii from hidden field (set by step3 sync)
+  const piiVal = $('#contains_pii')?.value;
+  data.contains_pii = piiVal === 'true' || $('#contains_pii_check')?.checked === true;
+  // subdomain → store in domain if domain is blank
+  const sub = $('#subdomain')?.value?.trim();
+  if (sub && !data.domain) data.domain = sub;
   return data;
 }
 
@@ -797,6 +856,17 @@ function resetRegisterForm() {
   $('#source-tags-wrap')?.querySelectorAll('.tag-input-item').forEach(t => t.remove());
   $('#tags-wrap')?.querySelectorAll('.tag-input-item').forEach(t => t.remove());
   $('#form-msg').textContent = '';
+  const subdomain = $('#subdomain'); if (subdomain) subdomain.value = '';
+  const slaInp = $('#sla-inp'); if (slaInp) slaInp.value = '';
+  const piiCheck = $('#contains_pii_check'); if (piiCheck) piiCheck.checked = false;
+  const clsSel = $('#classification-sel'); if (clsSel) clsSel.value = clsSel.options[0]?.value || '';
+  const freqSel = $('#update_frequency-sel'); if (freqSel) freqSel.value = freqSel.options[0]?.value || '';
+  const fmtSel = $('#output_format-sel'); if (fmtSel) fmtSel.value = fmtSel.options[0]?.value || '';
+  // Reset asset picker
+  selectedAssets = [];
+  renderAssetChips();
+  if ($('#source_systems')) $('#source_systems').value = '';
+  $('#asset-duplicate-warning')?.classList.add('hidden');
   hideClarifyPanel();
   clarifyAllowed = true;
   showStep(1);
@@ -982,6 +1052,116 @@ function collectRules(boxId) {
     rule: row.querySelector('.r-rule').value,
     description: row.querySelector('.r-desc').value.trim(),
   }));
+}
+
+// ── Asset picker (Step 2) ────────────────────────────────────────────
+let selectedAssets = [];
+
+function initAssetPicker() {
+  const wrap = $('#asset-picker-wrap');
+  const input = $('#asset-search-input');
+  const dropdown = $('#asset-dropdown');
+  if (!wrap || !input || !dropdown) return;
+
+  input.addEventListener('focus', () => renderAssetDropdown(input.value));
+  input.addEventListener('input', () => renderAssetDropdown(input.value));
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+  wrap.addEventListener('click', () => input.focus());
+}
+
+function renderAssetDropdown(query) {
+  const dropdown = $('#asset-dropdown');
+  const list = $('#asset-dropdown-list');
+  if (!dropdown || !list) return;
+
+  const q = query.toLowerCase().trim();
+  const filtered = DEMO_DATA_ASSETS.filter(a =>
+    !q || a.toLowerCase().includes(q)
+  );
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="asset-dropdown-empty">No assets found</div>`;
+  } else {
+    list.innerHTML = filtered.map(a => {
+      const checked = selectedAssets.includes(a);
+      return `<div class="asset-dropdown-item" data-asset="${esc(a)}">
+        <input type="checkbox" ${checked ? 'checked' : ''} />
+        <span>${esc(a)}</span>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.asset-dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const asset = item.dataset.asset;
+        const cb = item.querySelector('input');
+        if (selectedAssets.includes(asset)) {
+          selectedAssets = selectedAssets.filter(a => a !== asset);
+          if (cb) cb.checked = false;
+        } else {
+          selectedAssets.push(asset);
+          if (cb) cb.checked = true;
+        }
+        renderAssetChips();
+        syncAssetField();
+        checkAssetDuplicate(asset);
+      });
+    });
+  }
+  dropdown.classList.remove('hidden');
+}
+
+function renderAssetChips() {
+  const chipsEl = $('#asset-selected-chips');
+  if (!chipsEl) return;
+  chipsEl.innerHTML = selectedAssets.map(a => `
+    <span class="asset-chip">
+      ${esc(a)}
+      <button type="button" data-remove="${esc(a)}">&times;</button>
+    </span>
+  `).join('');
+  chipsEl.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedAssets = selectedAssets.filter(a => a !== btn.dataset.remove);
+      renderAssetChips();
+      syncAssetField();
+    });
+  });
+}
+
+function syncAssetField() {
+  const hidden = $('#source_systems');
+  if (hidden) hidden.value = selectedAssets.join(', ');
+}
+
+async function checkAssetDuplicate(assetName) {
+  const warn = $('#asset-duplicate-warning');
+  const cards = $('#asset-duplicate-cards');
+  if (!warn || !cards) return;
+  // Check if any existing product uses this asset
+  const matches = allProducts.filter(p =>
+    p.source_systems && p.source_systems.toLowerCase().includes(assetName.toLowerCase())
+  );
+  if (matches.length) {
+    cards.innerHTML = matches.map(p => `
+      <div class="dp-card" style="margin-top:8px;">
+        <div class="dp-card-title">${esc(p.name)}</div>
+        <div class="dp-card-desc">${esc(p.description?.slice(0,100) || '')}…</div>
+        <div style="margin-top:8px;">
+          <button class="btn ghost sm" data-view-detail="${p.id}">View Details</button>
+        </div>
+      </div>
+    `).join('');
+    cards.querySelectorAll('[data-view-detail]').forEach(btn =>
+      btn.addEventListener('click', () => openDetail(allProducts.find(p => p.id == btn.dataset.viewDetail)))
+    );
+    warn.classList.remove('hidden');
+  } else {
+    warn.classList.add('hidden');
+  }
 }
 
 // ── AI contract assist ───────────────────────────────────────────────

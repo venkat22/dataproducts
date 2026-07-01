@@ -159,56 +159,121 @@ body {
 }
 .back-btn:hover { color: var(--ink); }
 
-/* ─── Hero (Home page) ────────────────────────────────────────────── */
-.hero {
-  background: #0a0a0a;
-  color: #fff;
+/* ─── Hero new (Figma update) ─────────────────────────────────────── */
+.hero-new {
+  background: #fff;
   min-height: calc(100vh - 60px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  display: flex; align-items: center; justify-content: center;
   padding: 60px 32px;
-  position: relative;
-  overflow: hidden;
+  position: relative; overflow: hidden;
 }
-.hero::before {
-  content: '';
+.hero-blob {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(232,77,28,.18) 0%, transparent 70%);
+  right: -60px; top: -40px;
+  width: 520px; height: 520px;
+  background: radial-gradient(circle at 60% 40%, #ff6b2b 0%, #ffaa00 60%, transparent 80%);
+  border-radius: 50%;
+  opacity: .85;
   pointer-events: none;
 }
-.hero-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
-  border-radius: 999px; padding: 5px 14px; font-size: 12px;
-  color: rgba(255,255,255,.7); margin-bottom: 28px;
+.hero-content {
+  position: relative; z-index: 1;
+  max-width: 720px; width: 100%;
 }
-.hero-pills {
-  display: flex; gap: 12px; justify-content: center;
-  margin-bottom: 18px; flex-wrap: wrap;
+.hero-h1 {
+  font-size: 46px; font-weight: 800; line-height: 1.15;
+  color: var(--ink); margin-bottom: 16px;
 }
-.hero-pill {
-  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
-  border-radius: 999px; padding: 4px 14px; font-size: 12px;
-  color: rgba(255,255,255,.6); font-weight: 600; letter-spacing: .04em;
-  text-transform: uppercase;
+.hero-h1-orange { color: var(--orange); }
+.hero-sub {
+  font-size: 16px; color: var(--muted); line-height: 1.6;
+  margin-bottom: 32px;
 }
-.hero h1 {
-  font-size: 48px; font-weight: 800; line-height: 1.15;
-  max-width: 680px; margin-bottom: 16px;
+.hero-search-wrap {
+  display: flex; gap: 0; align-items: stretch;
+  background: #fff; border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow); margin-bottom: 20px;
 }
-.hero p {
-  font-size: 16px; color: rgba(255,255,255,.65); margin-bottom: 36px;
+.hero-search-input {
+  flex: 1; padding: 14px 18px; border: none; outline: none;
+  font: inherit; font-size: 15px; color: var(--ink);
+  background: transparent;
 }
-.hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.hero-actions .btn.outline-white {
-  background: transparent; color: #fff;
-  border: 1px solid rgba(255,255,255,.35);
+.hero-search-btn {
+  border-radius: 0; padding: 14px 28px; font-size: 15px; font-weight: 700;
 }
-.hero-actions .btn.outline-white:hover { background: rgba(255,255,255,.08); }
+.hero-keywords { margin-bottom: 20px; }
+.hero-kw-label { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 10px; }
+.hero-kw-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.hero-kw-chip {
+  background: #f8f9fa; border: 1px solid var(--line);
+  border-radius: 999px; padding: 5px 14px;
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--ink-2);
+  cursor: pointer; transition: background .15s, border-color .15s;
+}
+.hero-kw-chip:hover { background: var(--orange-light); border-color: var(--orange); color: var(--orange); }
+.hero-learn { font-size: 13px; color: var(--muted); }
+
+/* ─── Browse new layout (no sidebar) ─────────────────────────────── */
+.browse-new-layout { padding: 20px 32px 32px; max-width: 1240px; margin: 0 auto; }
+
+.domain-tabs-row {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 16px;
+}
+.domain-tab-btn {
+  background: #fff; border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 16px;
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.domain-tab-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-light); }
+.domain-tab-btn.active { background: var(--orange); border-color: var(--orange); color: #fff; font-weight: 600; }
+
+/* ─── Asset picker (Step 2) ───────────────────────────────────────── */
+.asset-picker-wrap {
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 8px 12px; background: #fff; min-height: 44px;
+  cursor: text; transition: border-color .15s, box-shadow .15s;
+}
+.asset-picker-wrap:focus-within {
+  border-color: var(--orange); box-shadow: 0 0 0 3px rgba(232,77,28,.1);
+}
+.asset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.asset-chip {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--orange-light); border: 1px solid rgba(232,77,28,.3);
+  border-radius: 6px; padding: 3px 8px 3px 10px;
+  font-size: 13px; font-weight: 500; color: var(--orange);
+}
+.asset-chip button {
+  background: none; border: none; cursor: pointer; color: var(--orange);
+  font-size: 14px; line-height: 1; padding: 0; opacity: .7;
+}
+.asset-chip button:hover { opacity: 1; }
+.asset-picker-input-row { display: flex; align-items: center; gap: 8px; }
+.asset-search-input {
+  border: none; outline: none; font: inherit; font-size: 14px;
+  flex: 1; padding: 2px 0; background: transparent; color: var(--ink);
+}
+.asset-dropdown {
+  background: #fff; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); margin-top: 4px;
+  max-height: 220px; overflow-y: auto;
+  box-shadow: var(--shadow);
+}
+.asset-dropdown-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; cursor: pointer; font-size: 14px;
+  transition: background .1s;
+}
+.asset-dropdown-item:hover { background: var(--orange-light); }
+.asset-dropdown-item input[type="checkbox"] { accent-color: var(--orange); flex-shrink: 0; }
+.asset-dropdown-empty { padding: 12px 14px; color: var(--muted); font-size: 13px; }
+
+/* ─── Legacy hero (keep hidden) ──────────────────────────────────── */
+.hero { display: none; }
 
 /* ─── Layout ──────────────────────────────────────────────────────── */
 .container { max-width: 1240px; margin: 0 auto; padding: 0 32px; }

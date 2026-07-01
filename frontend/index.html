@@ -12,16 +12,14 @@
 
 <!-- ── Top Nav ────────────────────────────────────────────────────── -->
 <header class="topbar">
-  <div class="brand">
+  <div class="brand" style="cursor:pointer;" data-view="home">
     <div class="brand-logo">&#9670;</div>
-    <div class="brand-divider"></div>
     <span class="brand-name">Unified Data Marketplace</span>
   </div>
   <nav class="nav-links">
     <button class="nav-link" data-view="browse">Browse Data Products</button>
     <button class="nav-link" data-view="myproducts">My Data Products <span id="my-count" class="nav-badge hidden">0</span></button>
     <button class="nav-link" data-view="register">Register</button>
-    <button class="nav-link" data-view="home">Learn</button>
   </nav>
   <button class="nav-user" title="Account">&#9679;</button>
 </header>
@@ -30,17 +28,30 @@
 
 <!-- HOME ─────────────────────────────────────────────────────────── -->
 <section id="view-home" class="view page">
-  <div class="hero">
-    <div class="hero-pills">
-      <span class="hero-pill">Discoverable</span>
-      <span class="hero-pill">Trusted</span>
-      <span class="hero-pill">Accessible</span>
-    </div>
-    <h1>Welcome to Vertiv's Unified Data Marketplace</h1>
-    <p>AI-Powered Unified view to your Data Landscape</p>
-    <div class="hero-actions">
-      <button class="btn outline-white" data-view="home">Learn More</button>
-      <button class="btn primary" data-view="browse">&#9776; Browse all Data Products</button>
+  <div class="hero-new">
+    <div class="hero-blob"></div>
+    <div class="hero-content">
+      <h1 class="hero-h1">Discover trusted data products<br><span class="hero-h1-orange">from search to insights to action</span></h1>
+      <p class="hero-sub">Search across Vertiv's business data by topic, team, or keyword —<br>no SQL, no Snowflake, no waiting.</p>
+      <div class="hero-search-wrap">
+        <input id="hero-search-input" type="text" class="hero-search-input" placeholder="Use the suggested keywords to browse data products" />
+        <button class="btn primary hero-search-btn" id="hero-search-go">Search</button>
+      </div>
+      <div class="hero-keywords">
+        <span class="hero-kw-label">Suggested Keywords</span>
+        <div class="hero-kw-chips" id="hero-kw-chips">
+          <button class="hero-kw-chip" data-kw="Sales">Sales</button>
+          <button class="hero-kw-chip" data-kw="Orders">Orders</button>
+          <button class="hero-kw-chip" data-kw="Finance">Finance</button>
+          <button class="hero-kw-chip" data-kw="Cost">Cost</button>
+          <button class="hero-kw-chip" data-kw="Leads">Leads</button>
+          <button class="hero-kw-chip" data-kw="Marketing">Marketing</button>
+          <button class="hero-kw-chip" data-kw="Forecasting">Forecasting</button>
+          <button class="hero-kw-chip" data-kw="Expenses">Expenses</button>
+          <button class="hero-kw-chip" data-kw="Conversion">Conversion</button>
+        </div>
+      </div>
+      <p class="hero-learn">&#9432; Want to learn more about Data Product? <a href="#" style="color:var(--orange);text-decoration:none;" data-view="browse">Click here</a></p>
     </div>
   </div>
 </section>
@@ -55,53 +66,27 @@
     </div>
     <h1 class="page-title">Browse Data Products</h1>
   </div>
-  <div class="browse-layout">
-    <!-- Filters -->
-    <aside class="filter-sidebar">
-      <div class="filter-panel">
-        <div class="filter-header">
-          <span class="filter-title">Filters</span>
-          <button id="reset-filters" class="reset-link">Reset all</button>
-        </div>
-        <div class="filter-section">
-          <div class="filter-section-title">Data Product</div>
-          <label class="filter-radio">
-            <input type="radio" name="dp-scope" value="all" checked /> All Data Products
-          </label>
-          <label class="filter-radio">
-            <input type="radio" name="dp-scope" value="mine" /> My Data Products
-          </label>
-        </div>
-        <div class="filter-section">
-          <div class="filter-section-title">Domain</div>
-          <div id="domain-filters"></div>
-        </div>
-        <div class="filter-section">
-          <div class="filter-section-title">Classification</div>
-          <div id="classification-filters"></div>
-        </div>
+  <div class="browse-new-layout">
+    <!-- Search + sort bar -->
+    <div class="browse-toolbar">
+      <div class="search-wrap" style="flex:1;">
+        <span class="search-icon">&#128269;</span>
+        <input id="search" type="text" class="search-input" placeholder="Search by name, description, tags..." />
       </div>
-    </aside>
-    <!-- Main -->
-    <div class="browse-main">
-      <div class="browse-toolbar">
-        <div class="search-wrap">
-          <span class="search-icon">&#128269;</span>
-          <input id="search" type="text" class="search-input" placeholder="Search by name, description, tags..." />
-        </div>
-        <button id="ai-search-btn" class="btn ghost sm" title="Describe what you need in plain language">&#129302; AI Search</button>
-        <div class="sort-wrap" style="margin-left:auto;">
-          <span class="sort-label">Sort by:</span>
-          <select id="sort-select" class="sort-select">
-            <option value="az">A - Z</option>
-            <option value="za">Z - A</option>
-            <option value="recent">Most Recent</option>
-          </select>
-        </div>
+      <button id="ai-search-btn" class="btn ghost sm" title="Describe what you need in plain language">&#129302; AI Search</button>
+      <div class="sort-wrap">
+        <span class="sort-label">Sort by:</span>
+        <select id="sort-select" class="sort-select">
+          <option value="az">A - Z</option>
+          <option value="za">Z - A</option>
+          <option value="recent">Most Recent</option>
+        </select>
       </div>
-      <div id="active-filters" class="active-filters" style="margin-bottom:8px;"></div>
-      <div id="catalog-list" class="card-grid"></div>
     </div>
+    <!-- Domain tabs as filter pills -->
+    <div id="domain-tabs" class="domain-tabs-row"></div>
+    <div id="active-filters" class="active-filters" style="margin-bottom:8px;"></div>
+    <div id="catalog-list" class="card-grid"></div>
   </div>
 </section>
 
@@ -194,38 +179,35 @@
       <div class="stepper" id="stepper">
         <div class="step active" data-step="1">
           <div class="step-circle">1</div>
-          <div class="step-label">Basic Information</div>
+          <div class="step-label">Core Information</div>
         </div>
         <div class="step" data-step="2">
           <div class="step-circle">2</div>
-          <div class="step-label">Input Ports – Define Data Sources</div>
+          <div class="step-label">Technical Data</div>
         </div>
         <div class="step" data-step="3">
           <div class="step-circle">3</div>
-          <div class="step-label">Source Data Information</div>
+          <div class="step-label">Business Details</div>
         </div>
         <div class="step" data-step="4">
           <div class="step-circle">4</div>
-          <div class="step-label">Output Ports</div>
-        </div>
-        <div class="step" data-step="5">
-          <div class="step-circle">5</div>
-          <div class="step-label">Tags</div>
+          <div class="step-label">Usage Examples</div>
         </div>
       </div>
 
-      <!-- Step 1: Basic Info -->
+      <!-- Step 1: Core Information -->
       <div class="step-content" id="step-1">
         <div class="step-content-header">
           <div class="step-content-icon">&#128196;</div>
           <div>
-            <h2>Basic Information</h2>
+            <h2>Core Information</h2>
             <p>Provide core details about your data product</p>
           </div>
         </div>
         <div class="field">
-          <label for="name">Product Name <span class="req">*</span></label>
-          <input id="name" name="name" type="text" required maxlength="200" placeholder="e.g. Sales Performance Analytics Data Product" />
+          <label for="name">Data Product Name <span class="req">*</span></label>
+          <input id="name" name="name" type="text" required maxlength="200" placeholder="e.g. Sales Order Backlog" />
+          <p id="name-duplicate-msg" class="form-msg err hidden" style="display:none;"></p>
         </div>
         <div class="field">
           <label for="description">Description <span class="req">*</span></label>
@@ -258,190 +240,118 @@
         </div>
         <div class="field-row">
           <div class="field">
-            <label for="domain">Business Function / Domain</label>
+            <label for="domain">Business Domain <span class="req">*</span></label>
             <input id="domain" name="domain" type="text" placeholder="e.g. Sales, Finance, Marketing" />
           </div>
+          <div class="field">
+            <label for="subdomain">Sub-Domain</label>
+            <input id="subdomain" name="subdomain" type="text" placeholder="e.g. Business Finance" />
+          </div>
+        </div>
+        <div class="field-row">
           <div class="field">
             <label for="owner_name">Owner Name</label>
             <input id="owner_name" name="owner_name" type="text" />
           </div>
-        </div>
-        <div class="field-row">
           <div class="field">
             <label for="owner_email">Owner Email</label>
             <input id="owner_email" name="owner_email" type="email" />
           </div>
-          <div class="field">
-            <label for="classification">Classification</label>
-            <select id="classification" name="classification"></select>
-          </div>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="update_frequency">Update Frequency</label>
-            <select id="update_frequency" name="update_frequency"></select>
-          </div>
-          <div class="field">
-            <label for="output_format">Output Format</label>
-            <select id="output_format" name="output_format"></select>
-          </div>
-        </div>
-        <div class="field">
-          <label for="sla">SLA</label>
-          <input id="sla" name="sla" type="text" placeholder="e.g. 99.9% availability, refreshed by 6am" />
-        </div>
-        <label class="checkbox-row">
-          <input id="contains_pii" name="contains_pii" type="checkbox" />
-          <span>Contains PII / sensitive personal data</span>
-        </label>
+        <input type="hidden" id="classification" name="classification" value="Internal" />
+        <input type="hidden" id="update_frequency" name="update_frequency" value="Daily" />
+        <input type="hidden" id="output_format" name="output_format" value="Table" />
+        <input type="hidden" id="sla" name="sla" />
+        <input type="hidden" id="contains_pii" name="contains_pii" />
         <input type="hidden" id="product_id" />
         <div class="step-footer">
           <div class="step-footer-left">
             <button type="button" class="btn ghost sm" id="step1-cancel">Cancel</button>
           </div>
           <div class="step-footer-right">
-            <button type="button" class="btn primary" id="step1-next">Next &rsaquo;</button>
+            <button type="button" class="btn primary" id="step1-next">Next ›</button>
           </div>
         </div>
         <p id="form-msg" class="form-msg"></p>
       </div>
 
-      <!-- Step 2: Input Ports -->
+      <!-- Step 2: Technical Data — Data Asset picker -->
       <div class="step-content hidden" id="step-2">
         <div class="step-content-header">
-          <div class="step-content-icon">&#128257;</div>
+          <div class="step-content-icon">&#128202;</div>
           <div>
-            <h2>Input Ports – Define Data Sources</h2>
-            <p>Raw data ingested directly from operational systems &amp; external APIs</p>
+            <h2>Select Data Asset(s)</h2>
+            <p>Validate data asset &amp; technical metadata</p>
           </div>
         </div>
         <div class="field">
-          <label for="source_systems">Source Tables / Systems <span class="req">*</span></label>
-          <div class="tag-input-wrap" id="source-tags-wrap">
-            <input type="text" class="tag-input-field" id="source-tag-input" placeholder="Type and press Enter…" />
-            <button type="button" class="tag-add-btn" id="source-tag-add">+</button>
+          <label>Data Asset(s) <span class="req">*</span></label>
+          <!-- Selected chips -->
+          <div class="asset-picker-wrap" id="asset-picker-wrap">
+            <div id="asset-selected-chips" class="asset-chips"></div>
+            <div class="asset-picker-input-row">
+              <span style="color:var(--muted);font-size:14px;">&#128269;</span>
+              <input id="asset-search-input" type="text" class="asset-search-input" placeholder="Search data assets…" autocomplete="off" />
+            </div>
+          </div>
+          <!-- Dropdown -->
+          <div id="asset-dropdown" class="asset-dropdown hidden">
+            <div id="asset-dropdown-list"></div>
           </div>
           <input type="hidden" id="source_systems" name="source_systems" />
-          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;">
-            <button type="button" class="btn ghost sm" id="suggest-sources-btn">&#129302; Suggest sources</button>
-            <p id="suggest-sources-note" class="ai-note" style="margin:0;"></p>
-          </div>
-          <div id="sources-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+        </div>
+        <!-- Existing product warning (shown when selected asset already has a product) -->
+        <div id="asset-duplicate-warning" class="hidden" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--radius);padding:16px 18px;margin-top:8px;">
+          <p style="font-size:13px;font-weight:600;color:#92400e;margin:0 0 10px;">&#9888; A data product with the selected data asset already exists. Kindly check the respective details or create a new data product on same data asset.</p>
+          <div id="asset-duplicate-cards"></div>
         </div>
         <div class="step-footer">
           <div class="step-footer-left">
             <button type="button" class="btn ghost sm" id="step2-cancel">Cancel</button>
           </div>
           <div class="step-footer-right">
-            <button type="button" class="btn ghost sm" id="step2-back">&lsaquo; Back</button>
-            <button type="button" class="btn primary" id="step2-next">Next &rsaquo;</button>
+            <button type="button" class="btn ghost sm" id="step2-back">‹ Back</button>
+            <button type="button" class="btn primary" id="step2-next">Next ›</button>
           </div>
         </div>
       </div>
 
-      <!-- Step 3: Source Data -->
+      <!-- Step 3: Business Details -->
       <div class="step-content hidden" id="step-3">
         <div class="step-content-header">
-          <div class="step-content-icon">&#128202;</div>
+          <div class="step-content-icon">&#127970;</div>
           <div>
-            <h2>Source Data Information</h2>
-            <p>Additional context about your source data</p>
+            <h2>Business Details</h2>
+            <p>Classify and configure your data product</p>
           </div>
-        </div>
-        <div class="field">
-          <label for="ai-prompt-s3">Describe the source data or paste a sample</label>
-          <textarea id="ai-prompt-s3" rows="4" placeholder="e.g. order_id,dealer_id,order_date,amount&#10;1001,D-22,2026-06-01,4200.50"></textarea>
-        </div>
-        <p class="ai-note" id="ai-note-s3"></p>
-        <div class="step-footer">
-          <div class="step-footer-left">
-            <button type="button" class="btn ghost sm" id="step3-cancel">Cancel</button>
-          </div>
-          <div class="step-footer-right">
-            <button type="button" class="btn ghost sm" id="step3-back">&lsaquo; Back</button>
-            <button type="button" class="btn primary" id="step3-next">Next &rsaquo;</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Step 4: Output Ports / Contract -->
-      <div class="step-content hidden" id="step-4">
-        <div class="step-content-header">
-          <div class="step-content-icon">&#128200;</div>
-          <div>
-            <h2>Output Ports</h2>
-            <p>Define what this data product produces</p>
-          </div>
-        </div>
-        <!-- Contract section -->
-        <div class="ai-note" id="ai-status-c-wrap" style="margin-bottom:12px;">
-          AI: <span id="ai-status-c" class="pill checking">checking…</span>
-        </div>
-        <div class="field">
-          <label>Use AI to draft the data contract</label>
-          <textarea id="ai-prompt-c" rows="4" placeholder="Paste a CSV header or JSON sample to let the AI infer schema, quality rules, and SLOs…"></textarea>
-          <button type="button" class="btn ghost sm" id="ai-fill-c" style="margin-top:8px;">Draft with AI</button>
-          <p id="ai-note-c" class="ai-note"></p>
         </div>
         <div class="field-row">
           <div class="field">
-            <label for="c-version">Contract Version</label>
-            <input id="c-version" value="1.0.0" />
+            <label for="classification-sel">Classification</label>
+            <select id="classification-sel" name="classification-sel"></select>
           </div>
           <div class="field">
-            <label for="c-status">Contract Status</label>
-            <select id="c-status"></select>
+            <label for="update_frequency-sel">Update Frequency</label>
+            <select id="update_frequency-sel" name="update_frequency-sel"></select>
           </div>
         </div>
-        <div class="section-h">Schema</div>
-        <div class="schema-head">
-          <span>Field</span><span>Type</span><span>Req</span><span>PII</span><span>Description</span><span></span>
-        </div>
-        <div id="schema-rows"></div>
-        <button type="button" id="add-field" class="btn ghost sm" style="margin-bottom:16px;">+ Add field</button>
-        <div class="section-h">Quality rules</div>
-        <div class="rule-head">
-          <span>Field</span><span>Rule</span><span>Description</span><span></span>
-        </div>
-        <div id="rule-rows"></div>
-        <button type="button" id="add-rule" class="btn ghost sm" style="margin-bottom:16px;">+ Add rule</button>
-        <div class="section-h">Service-level objectives</div>
-        <div class="row3">
+        <div class="field-row">
           <div class="field">
-            <label for="c-availability">Availability</label>
-            <input id="c-availability" placeholder="99.9%" />
+            <label for="output_format-sel">Output Format</label>
+            <select id="output_format-sel" name="output_format-sel"></select>
           </div>
           <div class="field">
-            <label for="c-freshness">Freshness</label>
-            <input id="c-freshness" placeholder="Refreshed by 6am daily" />
-          </div>
-          <div class="field">
-            <label for="c-latency">Max latency</label>
-            <input id="c-latency" placeholder="< 200ms p95" />
+            <label for="sla-inp">SLA</label>
+            <input id="sla-inp" type="text" placeholder="e.g. 99.9% availability, refreshed by 6am" />
           </div>
         </div>
-        <div class="step-footer">
-          <div class="step-footer-left">
-            <button type="button" class="btn ghost sm" id="step4-cancel">Cancel</button>
-          </div>
-          <div class="step-footer-right">
-            <button type="button" class="btn ghost sm" id="step4-back">&lsaquo; Back</button>
-            <button type="button" class="btn primary" id="step4-next">Next &rsaquo;</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Step 5: Tags -->
-      <div class="step-content hidden" id="step-5">
-        <div class="step-content-header">
-          <div class="step-content-icon">&#127991;</div>
-          <div>
-            <h2>Tags</h2>
-            <p>Keywords that help classify, search, and quickly identify the data product</p>
-          </div>
-        </div>
+        <label class="checkbox-row" style="margin-bottom:16px;">
+          <input id="contains_pii_check" name="contains_pii_check" type="checkbox" />
+          <span>Contains PII / sensitive personal data</span>
+        </label>
+        <!-- Tags -->
         <div class="field">
-          <label>Add Tags <span class="req">*</span></label>
+          <label>Tags</label>
           <div class="tag-input-wrap" id="tags-wrap">
             <input type="text" class="tag-input-field" id="tags-input" placeholder="Type and press Enter…" />
             <button type="button" class="tag-add-btn" id="tags-add">+</button>
@@ -455,15 +365,47 @@
         </div>
         <div class="step-footer">
           <div class="step-footer-left">
-            <button type="button" class="btn ghost sm" id="step5-cancel">Cancel</button>
+            <button type="button" class="btn ghost sm" id="step3-cancel">Cancel</button>
           </div>
           <div class="step-footer-right">
-            <button type="button" class="btn ghost sm" id="step5-back">&lsaquo; Back</button>
-            <button type="button" class="btn primary" id="step5-submit">Submit</button>
+            <button type="button" class="btn ghost sm" id="step3-back">‹ Back</button>
+            <button type="button" class="btn primary" id="step3-next">Next ›</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Usage Examples -->
+      <div class="step-content hidden" id="step-4">
+        <div class="step-content-header">
+          <div class="step-content-icon">&#128161;</div>
+          <div>
+            <h2>Usage Examples</h2>
+            <p>Help consumers understand how to use this data product</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="ai-prompt-c">Describe example use cases or paste a data sample</label>
+          <textarea id="ai-prompt-c" rows="5" placeholder="e.g. order_id,dealer_id,order_date,amount&#10;1001,D-22,2026-06-01,4200.50&#10;&#10;Used by the Sales team to track daily dealer revenue and forecast month-end performance."></textarea>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;">
+            <button type="button" class="btn ghost sm" id="ai-fill-c">&#129302; Draft contract with AI</button>
+            <p id="ai-note-c" class="ai-note" style="margin:0;"></p>
+          </div>
+        </div>
+        <div style="margin-bottom:8px;">
+          AI: <span id="ai-status-c" class="pill checking">checking…</span>
+        </div>
+        <div class="step-footer">
+          <div class="step-footer-left">
+            <button type="button" class="btn ghost sm" id="step4-cancel">Cancel</button>
+          </div>
+          <div class="step-footer-right">
+            <button type="button" class="btn ghost sm" id="step4-back">‹ Back</button>
+            <button type="button" class="btn primary" id="step4-submit">Submit</button>
           </div>
         </div>
         <p id="step5-msg" class="form-msg"></p>
       </div>
+
     </div>
   </div>
 </section>
